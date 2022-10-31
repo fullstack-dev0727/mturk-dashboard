@@ -33,7 +33,7 @@ export default function Pagination(props: PaginationProps) {
               >
                 {pageNum}
               </PageLink>
-              : <span class='page-link'>...</span> 
+              : <span class='page-link dark:text-white dark:bg-slate-800 dark:hover:text-white dark:hover:bg-slate-800 dark:hover:opacity-40'>...</span> 
           ))
         }
         <PageLink

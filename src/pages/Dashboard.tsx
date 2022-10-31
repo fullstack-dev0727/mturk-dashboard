@@ -2,8 +2,6 @@ import { onMount, Show, createSignal, Switch, Match, createEffect } from 'solid-
 
 import RecordViewList from '../components/RecordViewList';
 
-import RecordButton from '../assets/record-button.svg';
-import SaveButton from '../assets/save-button.svg';
 import NextButton from '../assets/next-button.svg';
 import PreviousButton from '../assets/previous-button.svg';
 
@@ -22,10 +20,12 @@ const RecordDashboard = () => {
 	const [getTotalRecorded, setTotalRecorded] = createSignal(1503)
     const [getEarned, setEarned] = createSignal(75.15)
     const [getBalance, setBalance] = createSignal(75.15)
+    const [getIsDarkMode, setIsDarkMode] = createSignal(false)
 
     // Record Views
     const [getRecordScripts, setRecordScripts] = createSignal<string[]>([])
     const [getCurrentIndex, setCurrentIndex] = createSignal(0)
+    const [getMaxRow, setMaxRow] = createSignal(7)
     const [getMaxColumn, setMaxColumn] = createSignal(4)
     let totalCount = 100
 
@@ -33,7 +33,7 @@ const RecordDashboard = () => {
     const [getDeviceFound, setDeviceFound] = createSignal(false)
     const [getRecordingId, setRecordingId] = createSignal('')
     const [getElapsedTime, setElapsedTime] = createSignal(0)
-    const [getRecordStatus, setRecordStatus] = createSignal(0)
+    const [getRecordStatus, setRecordStatus] = createSignal(0) //0: NoAction, 1: Recording, 2: Saved, 3: Playing
     const [getRecords, setRecords] = createSignal<RecordType[]>([])
     const [getMediaRecorder, setMediaRecorder] = createSignal<MediaRecorder>()
 
@@ -73,6 +73,17 @@ const RecordDashboard = () => {
         }
     }
 
+    const saveBlob = (blob: Blob, fileName: string) => {
+        var a: HTMLAnchorElement = document.createElement("a");
+        document.body.appendChild(a);
+        
+        var url = window.URL.createObjectURL(blob);
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
     const onRecord = () => {
         if (!getDeviceFound())
             return;
@@ -91,8 +102,9 @@ const RecordDashboard = () => {
         recordingTimerId && clearInterval(recordingTimerId);
         setRecordStatus(2)
         
-        const audioBlob = new Blob(chunks);
-        setRecords([...getRecords(), {index: getCurrentIndex(), time: getElapsedTime(), data: audioBlob}])
+        const audioBlob = new Blob(chunks, {type: 'audio/webm'});
+        // saveBlob(audioBlob, `myRecording.${audioBlob.type.split('/')[1].split(';')[0]}`);
+        setRecords([...getRecords().filter(record => record.index !== getCurrentIndex()), {index: getCurrentIndex(), time: getElapsedTime(), data: audioBlob}])
     }
 
     const onNext = () => {
@@ -128,9 +140,11 @@ const RecordDashboard = () => {
                 if (localStorage.getItem('color-theme') === 'light') {
                     document.documentElement.classList.add('dark');
                     localStorage.setItem('color-theme', 'dark');
+                    setIsDarkMode(true)
                 } else {
                     document.documentElement.classList.remove('dark');
                     localStorage.setItem('color-theme', 'light');
+                    setIsDarkMode(false)
                 }
 
             // if NOT set via local storage previously
@@ -138,24 +152,32 @@ const RecordDashboard = () => {
                 if (document.documentElement.classList.contains('dark')) {
                     document.documentElement.classList.remove('dark');
                     localStorage.setItem('color-theme', 'light');
+                    setIsDarkMode(false)
                 } else {
                     document.documentElement.classList.add('dark');
                     localStorage.setItem('color-theme', 'dark');
+                    setIsDarkMode(true)
                 }
             }
         });
     }
 
-    const setColumns = () => {
+    const setMaxRowAndColumn = () => {
         const width = document.documentElement.clientWidth
-        if(width > 1700) setMaxColumn(4)
+        const height = document.documentElement.clientHeight
+
+        setMaxRow((height - 280) / 85 | 0)
+
+        if(width > 3500) setMaxColumn(6)
+        if(width < 3500 && width > 2500) setMaxColumn(5)
+        if(width < 2560 && width > 1700) setMaxColumn(4)
         if(width < 1700 && width > 1350) setMaxColumn(3)
         if(width < 1350 && width > 1000) setMaxColumn(2)
         if(width < 1000) setMaxColumn(1)
     }
 
     window.addEventListener('resize', function(){
-        setColumns()
+        setMaxRowAndColumn()
     }, true)
 
     createEffect(() => {
@@ -172,7 +194,7 @@ const RecordDashboard = () => {
 
     onMount(() => {
         getDataWithAPI()
-        setColumns()
+        setMaxRowAndColumn()
         onDarkModeToggle()
         setRecordingId(makeid(30));
         getMedia();
@@ -219,10 +241,26 @@ const RecordDashboard = () => {
             </div>
             <div class='record-section'>
                 <div class='record-pane'>
-                    <div class='record-control dark:border-2 dark:shadow-[0_4px_8px_0_rgba(255,255,255,0.2)] dark:shadow-[0_6px_20px_0_rgba(255,255,255,0.2)]'>
+                    <div class='record-control dark:shadow-[0_4px_8px_0_rgba(255,255,255,0.2)] dark:shadow-[0_6px_20px_0_rgba(255,255,255,0.2)]'>
                         <Switch>
-                            <Match when={getRecordStatus() === 1}><img src={SaveButton} width="40" alt='SaveButton SVG' onClick={onSave}></img></Match>
-                            <Match when={getRecordStatus() !== 1}><img src={RecordButton} width="40" alt='StartButton SVG' classList={{disabled: getRecordStatus() === 3}} onClick={onRecord}></img></Match>
+                            <Match when={getRecordStatus() === 1}>
+                                <button class='w-8' onClick={onSave}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewBox="0 0 100 100">
+                                        <circle style="fill:#ffffff;" cx="50" cy="50" r="50"/>
+                                        <circle cx="50" cy="50" r="40" fill="none" stroke="#d92176" stroke-width="20" stroke-miterlimit="10"/>
+                                        <circle cx="50" cy="50" r="21" fill="#d92176"/>
+                                    </svg>
+                                </button>
+                            </Match>
+                            <Match when={getRecordStatus() !== 1}>
+                                <button class='w-8' classList={{disabled: getRecordStatus() === 3}} onClick={onRecord}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewBox="0 0 100 100">
+                                        <circle style="fill:#ffffff;" cx="50" cy="50" r="50"/>
+                                        <circle cx="50" cy="50" r="40" fill="none" stroke="#00af55" stroke-width="20" stroke-miterlimit="10"/>
+                                        <circle cx="50" cy="50" r="21" fill="#00af55"/>
+                                    </svg>
+                                </button>
+                            </Match>
                         </Switch>
                         <img src={NextButton} width="40" alt='NextButton SVG' onClick={onNext}></img>
                         <img src={PreviousButton} width="40" alt='PreviousButton SVG' onClick={onPrev}></img>
@@ -231,12 +269,13 @@ const RecordDashboard = () => {
                     <RecordViewList 
                         currentIndex = {getCurrentIndex()}
                         setCurrentIndex = {setCurrentIndex}
-                        maxRow = {7}
+                        maxRow = {getMaxRow()}
                         maxColumn = {getMaxColumn()}
                         elapsedTime = {getElapsedTime()}
                         recordScripts = {getRecordScripts()}
                         recordStatus = {getRecordStatus()}
                         setRecordStatus = {setRecordStatus}
+                        isDarkMode = {getIsDarkMode()}
                         records = {getRecords()}
                     />
                 </div>

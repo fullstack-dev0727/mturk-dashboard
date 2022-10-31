@@ -16,7 +16,7 @@ export const getUrlSearchParam = (param: string): string => {
     return searchParams.get(param)!
 }
 
-export const toHHMMSS = (secs: number): string => {
+export const toMMSS = (secs: number): string => {
     var hours   = Math.floor(secs / 3600)
     var minutes = Math.floor(secs / 60) % 60
     var seconds = secs % 60
