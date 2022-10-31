@@ -1,15 +1,15 @@
-import type { Component } from 'solid-js';
+import { Routes, Route } from "@solidjs/router"
 
 import styles from './App.module.css';
 import RecordDashboard from './pages/Dashboard';
+import Login from "./pages/Login";
 
-const App: Component = () => {
+const App = () => {
   return (
-    <div class={styles.App}>
-      <header class={styles.header}>
-        <RecordDashboard/>
-      </header>
-    </div>
+      <Routes>
+        <Route path="/dashboard" component={RecordDashboard} />
+        <Route path="/" component={Login} />
+      </Routes>
   );
 };
 
