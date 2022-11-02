@@ -18,7 +18,7 @@ const RecordDashboard = () => {
     // scripts list
     const scripts = [];
     const scriptIds = [];
-    const CSV_FILE_PATH = './name.csv';
+    const CSV_FILE_PATH = './src/assets/name.csv';
     const recordingStack: number[] = [];
     // Statistics
     const [getMturkID, setMturkID] = createSignal('a23AD2e')
@@ -41,9 +41,9 @@ const RecordDashboard = () => {
     const [changeData, setChangeData] = createSignal(-1)
     const [getRecordStatus, setRecordStatus] = createSignal(0)
     let initRecordsData: RecordType[] = [];
-    if (localStorage.getItem('recordsData') && localStorage.getItem('recordsData')?.trim()){
-        initRecordsData = JSON.parse(localStorage.getItem('recordsData'));
-    }
+    // if (localStorage.getItem('recordsData') && localStorage.getItem('recordsData')?.trim()){
+    //     initRecordsData = JSON.parse(localStorage.getItem('recordsData'));
+    // }
 
     const [getRecords, setRecords] = createSignal<RecordType[]>(initRecordsData)
     const [getMediaRecorder, setMediaRecorder] = createSignal<MediaRecorder>()
@@ -120,17 +120,18 @@ const RecordDashboard = () => {
 
     const getMedia = async () => {
         const constraints = {
-            video: false,
+            video: {  width: 1280, height: 720 },
             audio: true
         };
         const options = {
             audioBitsPerSecond: 128000,
             videoBitsPerSecond: 2500000,
-            mimeType: 'audio/webm\;codecs=opus'
+            mimeType: 'video/webm\;codecs=opus'
         }
 
-        if (!MediaRecorder.isTypeSupported(options['mimeType'])) options['mimeType'] = "audio/ogg; codecs=opus";
-
+        if (!MediaRecorder.isTypeSupported(options['mimeType'])) options['mimeType'] = "video/ogg; codecs=opus";
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        
         const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
         const mediaRecorder: MediaRecorder = new MediaRecorder(mediaStream, options);
         mediaRecorder.ondataavailable = handleOnDataAvailable;
@@ -167,7 +168,7 @@ const RecordDashboard = () => {
             setElapsedTime(getElapsedTime() + 1);
             if (changeData() !== getCurrentIndex()) {
                 clearInterval(recordingTimerId)
-                if (getMediaRecorder()?.state === 'recording'){
+                if (getMediaRecorder()?.state === 'recording') {
                     getMediaRecorder()?.stop()
                 }
             }
@@ -263,14 +264,13 @@ const RecordDashboard = () => {
         const width = document.documentElement.clientWidth
         const height = document.documentElement.clientHeight
 
-        setMaxRow((height - 300) / 75 | 0)
-
-        if (width > 3500) setMaxColumn(6)
-        if (width < 3500 && width > 2500) setMaxColumn(5)
-        if (width < 2560 && width > 1700) setMaxColumn(4)
-        if (width < 1700 && width > 1350) setMaxColumn(3)
-        if (width < 1350 && width > 1000) setMaxColumn(2)
-        if (width < 1000) setMaxColumn(1)
+        setMaxRow((height - 120) / 75 | 0)
+        if (width > 3000) setMaxColumn(6)
+        if (width > 2400 && width >= 3000) setMaxColumn(5)
+        if (width > 2000 && width >= 2400) setMaxColumn(4)
+        if (width <= 2000 && width > 1500) setMaxColumn(3)
+        if (width <= 1500 && width > 1100) setMaxColumn(2)
+        if (width <= 1100) setMaxColumn(1)
     }
 
     window.addEventListener('resize', function () {
@@ -285,7 +285,7 @@ const RecordDashboard = () => {
     createEffect((prev) => {
         setElapsedTime(0)
         setRecordStatus(0)
-        if (getMediaRecorder()?.state === 'recording') 
+        if (getMediaRecorder()?.state === 'recording')
             getMediaRecorder()?.stop();
     }, getCurrentIndex())
 
@@ -300,47 +300,8 @@ const RecordDashboard = () => {
 
     return (
         <div class='container dark:bg-slate-800'>
-            <div class='btn-theme'>
-                <button
-                    id="theme-toggle"
-                    type="button"
-                    class="text-black-500 border-2 border-black-400 dark:text-black-400 hover:bg-black-100 dark:hover:bg-black-700 focus:outline-none  dark:focus:ring-black-700 rounded-lg text-sm p-2.5"
-                >
-                    <svg
-                        id="theme-toggle-dark-icon"
-                        class="w-5 h-5 hidden"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                            d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"
-                        ></path>
-                    </svg>
-                    <svg
-                        id="theme-toggle-light-icon"
-                        class="w-5 h-5 hidden"
-                        fill="yellow"
-                        viewBox="0 0 20 20"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                            d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
-                            fill-rule="evenodd"
-                            clip-rule="evenodd"
-                        ></path>
-                    </svg>
-                </button>
-            </div>
-            <button class='bg-primary-500 hover:bg-primary-600 btn-request-payout'>Payout</button>
-            <div class='statistics-section grid grid-cols-1 md:grid-cols-2 gap-1 lg:grid-cols-2 lx:grid-cols-4'>
-                <span class='dark:text-white '>Mturk ID: <p class='dark:text-yellow-500'>{getMturkID()}</p></span>
-                <span class='dark:text-white min-w-260'>Total Recorded: <p class='dark:text-yellow-500'>{getTotalRecorded()}</p></span>
-                <span class='dark:text-white min-w-260'>Earned: <p class='dark:text-yellow-500'>${getEarned()}</p></span>
-                <span class='dark:text-white min-w-260'>Balance: <p class='dark:text-yellow-500'>${getBalance()}</p></span>
-            </div>
-            <div class='record-section'>
-                <div class='record-pane'>
+            <div class='record-section grid lx:grid-cols-5 lg:grid-cols-5 md:grid-cols-5 sm:grid-cols-1'>
+                <div class='record-pane lx:col-span-3 lg:col-span-3 md:col-span-3 sm:col-span-1'>
                     <div class='record-control dark:shadow-[0_4px_8px_0_rgba(255,255,255,0.2)] dark:shadow-[0_6px_20px_0_rgba(255,255,255,0.2)]'>
                         <Switch>
                             <Match when={getRecordStatus() === 1}>
@@ -379,6 +340,48 @@ const RecordDashboard = () => {
                         isDarkMode={getIsDarkMode()}
                         records={getRecords()}
                     />
+                </div>
+                <div class='lx:col-span-2 lg:col-span-2 md:col-span-2 sm:col-span-1'>
+                    <div class='statistics-section'>
+                        <button class='bg-primary-500 hover:bg-primary-600 btn-request-payout md:w-[150px] lg:w-[200px] xs:w-[100px]'>Payout</button>
+                        <button
+                            id="theme-toggle"
+                            type="button"
+                            class="text-black-500 border-1 border-black-400 dark:text-black-400 hover:bg-black-100 dark:hover:bg-black-700 focus:outline-none  dark:focus:ring-black-700 rounded-lg text-sm p-2.5"
+                        >
+                            <svg
+                                id="theme-toggle-dark-icon"
+                                class="w-5 h-5 hidden"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"
+                                ></path>
+                            </svg>
+                            <svg
+                                id="theme-toggle-light-icon"
+                                class="w-5 h-5 hidden"
+                                fill="yellow"
+                                viewBox="0 0 20 20"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                                    fill-rule="evenodd"
+                                    clip-rule="evenodd"
+                                ></path>
+                            </svg>
+                        </button>
+                        <div class='camera-section m-1 2xl:h-200 xl:h-64 lg:h-48 md:h-36 sm:h-24 xs:h-12 2xl:w-200 xl:w-64 lg:w-48 md:w-36 sm:w-24 xs:w-12 border-2 border-black-400 dark:text-black-400 '>
+                            <video id="cameraPreview"></video>
+                        </div>
+                        <div class='dark:text-white truncate '><div class='title truncate'>Mturk ID: </div><p class='dark:text-yellow-500 truncate'>{getMturkID()}</p></div>
+                        <div class='dark:text-white truncate '><div class='title truncate'>Total Recorded: </div><p class='dark:text-yellow-500 truncate'>{getTotalRecorded()}</p></div>
+                        <div class='dark:text-white truncate '><div class='title truncate'>Earned: </div><p class='dark:text-yellow-500 truncate'>${getEarned()}</p></div>
+                        <div class='dark:text-white truncate '><div class='title truncate'>Balance: </div><p class='dark:text-yellow-500 truncate'>${getBalance()}</p></div>
+                    </div>
                 </div>
             </div>
             <audio class='localAudio' autoplay></audio>

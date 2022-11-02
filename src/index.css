@@ -28,7 +28,10 @@ code {
 .bg-dark {
   background-color: rgba(51, 45, 45, 1) !important;
 }
-
+#theme-toggle{
+  float: right;
+  margin-top: 6px;
+}
 .bg-dark .btn-login {
   margin-top: 60px;
   padding: 0.625rem 3rem;
@@ -63,7 +66,6 @@ code {
 
 .record-section {
   margin-top: 1rem;
-  display: flex;
   flex-direction: column;
 }
 
@@ -100,7 +102,9 @@ button.disabled {
   box-shadow: none;
   pointer-events: none
 }
-
+.camera-section{
+  width: 90%;
+}
 .record-section .record-control img:hover,
 button:hover {
   filter: brightness(0.9);
@@ -110,10 +114,6 @@ button:hover {
   width: 20%;
 }
 
-.btn-theme {
-  position: absolute;
-  right: 50px;
-}
 
 .statistics-section {
   width: calc(100% - 100px);
@@ -124,27 +124,29 @@ button:hover {
   height: auto;
 }
 
-.statistics-section span {
-  min-width: max-content;
+.statistics-section div {
   font-weight: 600;
   display: flex;
   align-items: center;
-  font-size: 1.4rem;
+  font-size: 1.2rem;
 }
-
+.title {
+  width: 200px;
+}
 .ml-auto h5 {
   margin: auto;
 }
 
-.statistics-section span p {
+.statistics-section div p {
   color: red;
   font-weight: 600;
   margin-left: 1rem;
+  width: 150px;
 }
 
 .btn-request-payout {
   width: auto;
-  right: 120px;
+  margin-top: 6px;
   min-width: max-content;
   padding: 0.5rem;
   border-radius: .6rem;
@@ -154,7 +156,7 @@ button:hover {
   font-size: 1.1rem;
   font-weight: 600;
   color: white;
-  position: absolute;
+  width: 300px;
 }
 
 .btn-request-payout:hover {
@@ -222,8 +224,8 @@ button:hover {
   display: flex;
   flex-wrap: wrap;
   margin-bottom: 2rem;
-  position: absolute;
   bottom: 0px;
+  margin-top: 2rem;
 }
 
 .page-link {
