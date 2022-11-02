@@ -18,7 +18,7 @@ const RecordDashboard = () => {
     // scripts list
     const scripts = [];
     const scriptIds = [];
-    const CSV_FILE_PATH = './src/assets/name.csv';
+    const CSV_FILE_PATH = './name.csv';
     const recordingStack: number[] = [];
     // Statistics
     const [getMturkID, setMturkID] = createSignal('a23AD2e')
