@@ -1,13 +1,17 @@
-import { Component, Suspense, For, onMount, createSignal, createEffect, Show, $DEVCOMP } from "solid-js";
+import { Component, Suspense, For, onMount, createSignal, createEffect, Show, $DEVCOMP, Switch, Match } from "solid-js";
 
 import Pagination from '../components/Pagination';
 import type { RecordType } from "../pages/Dashboard";
 
 import Microphone from '../assets/microphone.svg';
+import MicrophonePending from '../assets/microphone-pending.svg';
+import MicrophoneSuccess from '../assets/microphone-success.svg';
+import MicrophoneError from '../assets/microphone-error.svg';
 import MicrophoneWhite from '../assets/microphone-white.svg';
 import PlayButton from '../assets/play-button.svg';
 import StopButton from '../assets/stop-button.svg';
 import AudioAnimation from '../assets/audio-animation.gif';
+import { createStore, SetStoreFunction, Store } from "solid-js/store";
 
 import { toMMSS } from "../utils";
 
@@ -20,12 +24,12 @@ export type RecordViewListProps = {
   records: RecordType[];
   recordScripts: string[];
   recordStatus: number;
+  changeData: number;
   isDarkMode: boolean;
   setRecordStatus: (status: number) => void;
 }
 
 const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListProps) => {
-  
   const [getCurrentPage, setCurrentPage] = createSignal(1)
   const [getSubListWidth, setSubListWidth] = createSignal('col-12')
   const [getMaxLength, setMaxLength] = createSignal(0)
@@ -35,10 +39,11 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
   const [getPlayingTime, setPlayingTime] = createSignal(0)
 
   let playingTimerId: number;
-  let audio:HTMLAudioElement;
+  let audio: HTMLAudioElement;
 
   const setActive = (index: number) => {
     props.setCurrentIndex(index)
+    props.setRecordStatus(0)
   }
 
   const setWidth = (count: number) => {
@@ -54,6 +59,8 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
     }, 1000);
 
     const audioBlob = props.records.filter(record => record.index === index)[0].data
+
+    console.log(audioBlob)
     const audioUrl = URL.createObjectURL(audioBlob);
     audio = new Audio(audioUrl) as HTMLAudioElement;
     audio.play();
@@ -67,7 +74,7 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
     audio && audio.pause();
   }
 
-  const getFirstRow = (column: number):number => {
+  const getFirstRow = (column: number): number => {
     return column * props.maxRow + (getCurrentPage() - 1) * getMaxLength()
   }
 
@@ -100,20 +107,34 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
                 <For
                   each={[...Array(props.maxRow).keys()].map(i => props.recordScripts[i + getFirstRow(column)])}
                 >
-                  {(record, i) => ( record &&
+                  {(record, i) => (record &&
                     <div class='record-view dark:text-white dark:bg-slate-800 dark:shadow-[0_4px_8px_0_rgba(255,255,255,0.2)] dark:shadow-[0_6px_20px_0_rgba(255,255,255,0.2)]' classList={{ selected: props.currentIndex === i() + getFirstRow(column) }} onClick={[setActive, i() + getFirstRow(column)]}>
-                      <Show when={props.currentIndex === i() + getFirstRow(column) || props.isDarkMode} fallback={<img src={Microphone} width="18" alt='Mircophone SVG'/>}>
-                        <img src={MicrophoneWhite} width="18" alt='MicrophoneWhite SVG'/>
-                      </Show>
+                      <Switch fallback={<img src={Microphone} width="18" alt='MicrophoneWhite SVG' />}>
+                        <Match when={props.records.filter(record => record.index === i() + getFirstRow(column))[0]?.status === 4}>
+                          <img src={MicrophonePending} width="18" alt='MicrophoneWhite SVG' />
+                        </Match>
+                        <Match when={props.records.filter(record => record.index === i() + getFirstRow(column))[0]?.status === 5}>
+                          <img src={MicrophoneError} width="18" alt='MicrophoneWhite SVG' />
+                        </Match>
+                        <Match when={props.records.filter(record => record.index === i() + getFirstRow(column))[0]?.status === 2}>
+                          <img src={MicrophoneSuccess} width="18" alt='MicrophoneWhite SVG' />
+                        </Match>
+                        <Match when={props.currentIndex === i() + getFirstRow(column) || props.isDarkMode}>
+                          <img src={MicrophoneWhite} width="18" alt='MicrophoneWhite SVG' />
+                        </Match>
+                      </Switch>
                       <p> {record} </p>
                       <div class="ml-auto flex">
+                        <Show when={(props.records.filter(record => record.index === i() + getFirstRow(column))[0]?.status === 2 || props.records.filter(record => record.index === i() + getFirstRow(column))[0]?.status === 4 || props.records.filter(record => record.index === i() + getFirstRow(column))[0]?.status === 5) && (props.currentIndex !== i() + getFirstRow(column))}>
+                          <h5>{toMMSS(props.records.filter(record => record.index === i() + getFirstRow(column))[0]?.time)}</h5>
+                        </Show>
                         <Show when={props.currentIndex === i() + getFirstRow(column)}>
                           <Show when={props.recordStatus === 1 || props.recordStatus === 2}>
                             <h5>{toMMSS(props.elapsedTime)}</h5>
                           </Show>
                           <Show when={getCurrentRecord()}>
                             <Show when={getIsPlaying()}>
-                              {toMMSS(getPlayingTime())}/
+                              <h5>{toMMSS(getPlayingTime())}/</h5>
                             </Show>
                             {(props.recordStatus === 0 || props.recordStatus === 3) && <h5>{toMMSS(getCurrentRecord()!.time)}</h5>}
                             <Show when={!getIsPlaying() && props.recordStatus !== 1}>

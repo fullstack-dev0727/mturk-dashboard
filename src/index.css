@@ -2,7 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+* {
+  font-family: monospace;
+}
+
+div.record-view {
+  transition: .5s ease;
+}
+
 body {
+  font-family: 'Didot';
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
@@ -17,7 +26,7 @@ code {
 }
 
 .bg-dark {
-  background-color: rgba(51,45,45, 1)!important;
+  background-color: rgba(51, 45, 45, 1) !important;
 }
 
 .bg-dark .btn-login {
@@ -46,85 +55,106 @@ code {
 .container {
   min-width: 100%;
   min-height: 100vh;
-  padding: 3rem;
+  max-height: 100vh;
+  padding: 1.5rem;
   text-align: left;
   color: black;
 }
 
 .record-section {
+  margin-top: 1rem;
   display: flex;
   flex-direction: column;
 }
 
 .record-section .record-pane {
   display: flex;
-  margin-top: 2rem;
+  bottom: 0px;
 }
 
 .record-section .record-control {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 3.15rem;
-    height: fit-content;
-    margin-left: 1rem;
-    margin-right: 1rem;
-    border-radius: 28px;
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
-    cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.15rem;
+  height: fit-content;
+  margin-left: 1rem;
+  margin-right: 1rem;
+  border-radius: 28px;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  cursor: pointer;
 }
 
-.record-section .record-control img, button {
+.record-section .record-control img,
+button {
   margin: 1rem 0rem;
 }
 
-.record-section .record-control img.disabled, button.disabled {
-  border:none;
-  background-image:none;
-  opacity:.4;
-  cursor:not-allowed;
-  -webkit-box-shadow:none;
-  box-shadow:none;
-  pointer-events:none
+.record-section .record-control img.disabled,
+button.disabled {
+  border: none;
+  background-image: none;
+  opacity: .4;
+  cursor: not-allowed;
+  -webkit-box-shadow: none;
+  box-shadow: none;
+  pointer-events: none
 }
 
-.record-section .record-control img:hover, button:hover{
+.record-section .record-control img:hover,
+button:hover {
   filter: brightness(0.9);
 }
 
+.btn-section {
+  width: 20%;
+}
+
+.btn-theme {
+  position: absolute;
+  right: 50px;
+}
+
 .statistics-section {
-  display: flex;
+  width: calc(100% - 100px);
   justify-content: space-between;
   align-items: center;
   margin-left: 1.5rem;
   margin-right: 1.5rem;
-  height: 4rem;
+  height: auto;
 }
 
 .statistics-section span {
   min-width: max-content;
-
+  font-weight: 600;
   display: flex;
   align-items: center;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
+}
+
+.ml-auto h5 {
+  margin: auto;
 }
 
 .statistics-section span p {
   color: red;
+  font-weight: 600;
   margin-left: 1rem;
 }
 
 .btn-request-payout {
-  width: 12rem;
+  width: auto;
+  right: 120px;
   min-width: max-content;
   padding: 0.5rem;
-  border-radius: 2.6rem;
+  border-radius: .6rem;
   border-color: white;
-  background-color: #00af55;
+  background-color: #007bff;
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: white;
+  position: absolute;
 }
 
 .btn-request-payout:hover {
@@ -148,7 +178,7 @@ code {
 .record-view {
   margin: 1rem;
   padding: 0rem 1.5rem;
-  min-width: 18.5em;
+  min-width: 13em;
   display: flex;
   align-items: center;
   background-color: white;
@@ -171,12 +201,16 @@ code {
 }
 
 .record-view p {
-  margin: 0.5rem 1rem;
-  font-size: 1.4rem;
+  margin: 0.5rem .5rem;
+  font-size: 1.1rem;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 200px;
+  white-space: nowrap;
 }
 
 .selected {
-  background-color: #00ab2d !important;
+  background-color: #007bff !important;
   color: white;
 }
 
@@ -187,7 +221,9 @@ code {
 .pagination {
   display: flex;
   flex-wrap: wrap;
-  margin-top: 3rem;
+  margin-bottom: 2rem;
+  position: absolute;
+  bottom: 0px;
 }
 
 .page-link {
@@ -209,7 +245,8 @@ code {
   cursor: pointer;
 }
 
-.page-link:first-child, .page-link:last-child{
+.page-link:first-child,
+.page-link:last-child {
   color: black;
   font-weight: 700;
 }
@@ -220,7 +257,7 @@ code {
 
 .page-link:hover,
 .page-link:focus {
-  color: rgb(0, 171, 85);
+  color: #007bff;
   background-color: #e9ecef;
 }
 
@@ -231,7 +268,7 @@ code {
 .page-link.active {
   z-index: 2;
   color: #ffffff;
-  background-color: #00af55 !important;
+  background-color: #007bff !important;
 }
 
 .page-link.disabled {
