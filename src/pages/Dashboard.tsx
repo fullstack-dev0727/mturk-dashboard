@@ -1,11 +1,14 @@
-import { onMount, Show, createSignal, Switch, Match, createEffect } from 'solid-js';
+import { onMount, Show, createSignal, Switch, Match, createEffect, For } from 'solid-js';
 
 import RecordViewList from '../components/RecordViewList';
+import TransitionsModal from '../components/Modal';
+import Camera from '../components/Camera';
 import { createStore, SetStoreFunction, Store } from "solid-js/store";
 import NextButton from '../assets/next-button.svg';
 import PreviousButton from '../assets/previous-button.svg';
-
+import { notificationService } from '@hope-ui/solid'
 import { makeid, getUrlSearchParam } from '../utils';
+import CustomModal from '../components/Modal';
 
 export type RecordType = {
     index: number,
@@ -14,11 +17,18 @@ export type RecordType = {
     status: number,
 }
 
+export type CameraType = {
+    index: number,
+    did: string,
+    state: boolean,
+    label: string,
+}
+
 const RecordDashboard = () => {
     // scripts list
     const scripts = [];
     const scriptIds = [];
-    const CSV_FILE_PATH = './src/assets/name.csv';
+    const CSV_FILE_PATH = './name.csv';
     const recordingStack: number[] = [];
     // Statistics
     const [getMturkID, setMturkID] = createSignal('a23AD2e')
@@ -34,13 +44,17 @@ const RecordDashboard = () => {
     const [getMaxColumn, setMaxColumn] = createSignal(4)
     let totalCount = 100
 
-    // Audio Recording
+    // Video Recording
     const [getDeviceFound, setDeviceFound] = createSignal(false)
     const [getRecordingId, setRecordingId] = createSignal('')
     const [getElapsedTime, setElapsedTime] = createSignal(0)
     const [changeData, setChangeData] = createSignal(-1)
     const [getRecordStatus, setRecordStatus] = createSignal(0)
     let initRecordsData: RecordType[] = [];
+
+    // Camera lists
+    const [camera, setCamera] = createSignal<CameraType[]>([]);
+    const [currentCamera, setCurrentCamera] = createSignal('-1')
     // if (localStorage.getItem('recordsData') && localStorage.getItem('recordsData')?.trim()){
     //     initRecordsData = JSON.parse(localStorage.getItem('recordsData'));
     // }
@@ -48,8 +62,20 @@ const RecordDashboard = () => {
     const [getRecords, setRecords] = createSignal<RecordType[]>(initRecordsData)
     const [getMediaRecorder, setMediaRecorder] = createSignal<MediaRecorder>()
 
+    // video preview
+
+    let streamStarted = false;
+    const constraints = {
+        video: { width: 1280, height: 720 },
+        audio: true
+    };
+    const options = {
+        audioBitsPerSecond: 128000,
+        videoBitsPerSecond: 2500000,
+        mimeType: 'video/webm\;codecs=opus'
+    }
+
     let chunks: Blob[] = [];
-    let localAudio: HTMLAudioElement;
     let recordingTimerId: number;
 
     if (localStorage.getItem('color-theme')) {
@@ -119,26 +145,70 @@ const RecordDashboard = () => {
     }
 
     const getMedia = async () => {
-        const constraints = {
-            video: {  width: 1280, height: 720 },
-            audio: true
-        };
-        const options = {
-            audioBitsPerSecond: 128000,
-            videoBitsPerSecond: 2500000,
-            mimeType: 'video/webm\;codecs=opus'
-        }
-
         if (!MediaRecorder.isTypeSupported(options['mimeType'])) options['mimeType'] = "video/ogg; codecs=opus";
         const devices = await navigator.mediaDevices.enumerateDevices();
-        
-        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-        const mediaRecorder: MediaRecorder = new MediaRecorder(mediaStream, options);
-        mediaRecorder.ondataavailable = handleOnDataAvailable;
-        setMediaRecorder(mediaRecorder)
-
-        setDeviceFound(true);
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        if (videoDevices.length < 1) {
+            notificationService.show({
+                status: "danger", /* or success, warning, danger */
+                title: "Not found device!",
+                description: "Please check your camera device. 🤥",
+                duration: 3_000,
+            });
+            console.log('No device!!!');
+            return;
+        }
+        let camArr: any[] = [];
+        for (let i = 0; i < videoDevices.length; i++) {
+            let device = videoDevices[i];
+            if (i == 0)
+                camArr.push({ index: i, 'did': device.deviceId, state: true, 'label': device.label })
+            else
+                camArr.push({ index: i, 'did': device.deviceId, state: false, 'label': device.label })
+        };
+        setCamera(camArr)
+        setCurrentCamera(camArr.filter(cam => cam.state === true)[0]?.did)
+        setTimeout(function () {
+            startStream();
+        }, 500)
     }
+
+    const startStream = async () => {
+        // if (currentCamera() == 'none')
+        //     return;
+        const updatedConstraints = {
+            video: {
+                width: {
+                    min: 720,
+                    ideal: 1080,
+                    max: 1440,
+                },
+                height: {
+                    min: 720,
+                    ideal: 1080,
+                    max: 1440
+                },
+            },
+            audio: true,
+            deviceId: {
+                exact: currentCamera()
+            }
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(updatedConstraints);
+
+        const mediaRecorder: MediaRecorder = new MediaRecorder(stream, options);
+        mediaRecorder.ondataavailable = handleOnDataAvailable;
+        setMediaRecorder(mediaRecorder);
+        setDeviceFound(true);
+        handleStream(stream);
+    };
+
+    const handleStream = (stream: any) => {
+        let video = document.getElementById('cameraPreview')
+        video.srcObject = stream;
+        video.play();
+        streamStarted = true;
+    };
 
     const handleOnDataAvailable = ({ data }: any) => {
         if (data.size > 0) {
@@ -182,17 +252,17 @@ const RecordDashboard = () => {
         clearInterval(recordingTimerId);
         setRecordStatus(4)
 
-        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-        setRecords([...getRecords().filter(record => record.index !== getCurrentIndex()), { index: getCurrentIndex(), time: getElapsedTime(), data: audioBlob, status: 4 }])
+        const videoBlob = new Blob(chunks, { type: 'video/webm' });
+        setRecords([...getRecords().filter(record => record.index !== getCurrentIndex()), { index: getCurrentIndex(), time: getElapsedTime(), data: videoBlob, status: 4 }])
         localStorage.setItem('recordsData', JSON.stringify(getRecords()))
-        // after recording audio, move to next automatically 
+        // after recording video, move to next automatically 
         onNext()
-        compareWithScript(audioBlob)
-        // saveBlob(audioBlob, `myRecording.${audioBlob.type.split('/')[1].split(';')[0]}`);
+        compareWithScript(videoBlob)
+        // saveBlob(videoBlob, `myRecording.${videoBlob.type.split('/')[1].split(';')[0]}`);
     }
 
-    const compareWithScript = (audioBlob: Blob) => {
-        // saveBlob(audioBlob, `myRecording.${audioBlob.type.split('/')[1].split(';')[0]}`);
+    const compareWithScript = (videoBlob: Blob) => {
+        // saveBlob(videoBlob, `myRecording.${videoBlob.type.split('/')[1].split(';')[0]}`);
         let status = 2;
         if (Math.random() < 0.5)
             status = 5;
@@ -201,8 +271,24 @@ const RecordDashboard = () => {
         data.status = status
         setRecordStatus(status)
         setRecords([...getRecords().filter(record => record.index !== temp_index), data])
-        console.log(getRecords())
         localStorage.setItem('recordsData', JSON.stringify(getRecords()))
+    }
+
+    const changeCamera = (eve: any) => {
+        if (eve.currentTarget.value === 'none') {
+            let video = document.getElementById('cameraPreview')
+            video.srcObject = null;
+            video.play();
+            setDeviceFound(false)
+            return;
+        }
+        else {
+            setCurrentCamera(camera().filter(cam => cam.did === eve.currentTarget.value)[0]?.did)
+        }
+        startStream();
+    }
+
+    const selectCamera = (evt: any) => {
     }
 
     const onNext = () => {
@@ -264,7 +350,7 @@ const RecordDashboard = () => {
         const width = document.documentElement.clientWidth
         const height = document.documentElement.clientHeight
 
-        setMaxRow((height - 120) / 75 | 0)
+        setMaxRow((height - 60) / 65 | 0)
         if (width > 3000) setMaxColumn(6)
         if (width > 2400 && width >= 3000) setMaxColumn(5)
         if (width > 2000 && width >= 2400) setMaxColumn(4)
@@ -343,48 +429,65 @@ const RecordDashboard = () => {
                 </div>
                 <div class='lx:col-span-2 lg:col-span-2 md:col-span-2 sm:col-span-1'>
                     <div class='statistics-section'>
-                        <button class='bg-primary-500 hover:bg-primary-600 btn-request-payout md:w-[150px] lg:w-[200px] xs:w-[100px]'>Payout</button>
-                        <button
-                            id="theme-toggle"
-                            type="button"
-                            class="text-black-500 border-1 border-black-400 dark:text-black-400 hover:bg-black-100 dark:hover:bg-black-700 focus:outline-none  dark:focus:ring-black-700 rounded-lg text-sm p-2.5"
-                        >
-                            <svg
-                                id="theme-toggle-dark-icon"
-                                class="w-5 h-5 hidden"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                                xmlns="http://www.w3.org/2000/svg"
+                        <div class='btn-group'>
+                            <button class='bg-primary-500 hover:bg-primary-600 btn-request-payout md:w-[150px] lg:w-[200px] xs:w-[100px]'>Payout</button>
+                            <button
+                                id="theme-toggle"
+                                type="button"
+                                class="text-black-500 border-2 border-black-400 dark:text-black-400 hover:bg-black-100 dark:hover:bg-black-700 focus:outline-none  dark:focus:ring-black-700 rounded-lg text-sm p-2.5"
                             >
-                                <path
-                                    d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"
-                                ></path>
-                            </svg>
-                            <svg
-                                id="theme-toggle-light-icon"
-                                class="w-5 h-5 hidden"
-                                fill="yellow"
-                                viewBox="0 0 20 20"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
-                                    fill-rule="evenodd"
-                                    clip-rule="evenodd"
-                                ></path>
-                            </svg>
-                        </button>
-                        <div class='camera-section m-1 2xl:h-200 xl:h-64 lg:h-48 md:h-36 sm:h-24 xs:h-12 2xl:w-200 xl:w-64 lg:w-48 md:w-36 sm:w-24 xs:w-12 border-2 border-black-400 dark:text-black-400 '>
-                            <video id="cameraPreview"></video>
+                                <svg
+                                    id="theme-toggle-dark-icon"
+                                    class="w-5 h-5 hidden"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <path
+                                        d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"
+                                    ></path>
+                                </svg>
+                                <svg
+                                    id="theme-toggle-light-icon"
+                                    class="w-5 h-5 hidden"
+                                    fill="yellow"
+                                    viewBox="0 0 20 20"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <path
+                                        d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                                        fill-rule="evenodd"
+                                        clip-rule="evenodd"
+                                    ></path>
+                                </svg>
+                            </button>
                         </div>
-                        <div class='dark:text-white truncate '><div class='title truncate'>Mturk ID: </div><p class='dark:text-yellow-500 truncate'>{getMturkID()}</p></div>
-                        <div class='dark:text-white truncate '><div class='title truncate'>Total Recorded: </div><p class='dark:text-yellow-500 truncate'>{getTotalRecorded()}</p></div>
-                        <div class='dark:text-white truncate '><div class='title truncate'>Earned: </div><p class='dark:text-yellow-500 truncate'>${getEarned()}</p></div>
-                        <div class='dark:text-white truncate '><div class='title truncate'>Balance: </div><p class='dark:text-yellow-500 truncate'>${getBalance()}</p></div>
+                        <div class='preview-div'>
+                            <div class='camera-section m-1 2xl:h-200 xl:h-64 lg:h-64 md:h-48 sm:h-48 xs:h-48 2xl:w-200 xl:w-64 lg:w-64 md:w-48 sm:w-48 xs:w-48 border-2 border-black-400 dark:text-black-400 '>
+                                <video id="cameraPreview" autoplay poster="./poster.png"></video>
+                            </div>
+                        </div>
+                        <div class='m-1'>
+                            <select id='camera_list' class='select-camera border-2 border-black-400 dark:text-black-400 hover:bg-black-100 dark:hover:bg-black-700 focus:outline-none  dark:focus:ring-black-700 rounded-lg dark:bg-slate-800 dark:text-white' onChange={changeCamera} onSelect={selectCamera}>
+                                <For each={[...camera().keys()].map((e, i) => i)} fallback={<option value='none'>Not found any device.</option>}>
+                                    {(column, i) => (
+                                        <Camera
+                                            state={camera().filter(record => record.index == i())[0]?.state}
+                                            did={camera().filter(record => record.index == i())[0]?.did}
+                                            label={camera().filter(record => record.index == i())[0]?.label}>
+                                        </Camera>
+                                    )}
+                                </For>
+                            </select>
+                        </div>
+                        <div class='dark:text-white truncate section-item'><div class='title truncate'>Mturk ID: </div><p class='dark:text-yellow-500 truncate'>{getMturkID()}</p></div>
+                        <div class='dark:text-white truncate section-item'><div class='title truncate'>Total Recorded: </div><p class='dark:text-yellow-500 truncate'>{getTotalRecorded()}</p></div>
+                        <div class='dark:text-white truncate section-item'><div class='title truncate'>Earned: </div><p class='dark:text-yellow-500 truncate'>${getEarned()}</p></div>
+                        <div class='dark:text-white truncate section-item'><div class='title truncate'>Balance: </div><p class='dark:text-yellow-500 truncate'>${getBalance()}</p></div>
                     </div>
                 </div>
             </div>
-            <audio class='localAudio' autoplay></audio>
+            {/* <audio class='localAudio' autoplay></audio> */}
         </div>
     );
 };

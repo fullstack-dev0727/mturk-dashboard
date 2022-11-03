@@ -15,7 +15,7 @@ const Login = () => {
     }
 
     return (
-        <div class="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-900 to-blue-600">
+        <div class="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-600 to-white-300">
             <div class="rounded-2xl p-12 flex items-center justify-center flex-col bg-dark">
                 <h2 class="font-bold mb-2 text-white uppercase text-4xl"> Login </h2>
                 <p class="text-white/50 mb-12"> Please enter your mtruk ID! </p>
