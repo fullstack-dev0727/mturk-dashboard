@@ -386,8 +386,8 @@ const RecordDashboard = () => {
 
     return (
         <div class='container dark:bg-slate-800'>
-            <div class='record-section grid lx:grid-cols-5 lg:grid-cols-5 md:grid-cols-5 sm:grid-cols-1'>
-                <div class='record-pane lx:col-span-3 lg:col-span-3 md:col-span-3 sm:col-span-1'>
+            <div class='record-section grid lx:grid-cols-10 lg:grid-cols-8 md:grid-cols-5 sm:grid-cols-1'>
+                <div class='record-pane lx:col-span-8 lg:col-span-6 md:col-span-3 sm:col-span-1'>                    
                     <div class='record-control dark:shadow-[0_4px_8px_0_rgba(255,255,255,0.2)] dark:shadow-[0_6px_20px_0_rgba(255,255,255,0.2)]'>
                         <Switch>
                             <Match when={getRecordStatus() === 1}>
