@@ -15,11 +15,11 @@ const config: HopeThemeConfig = {
 
 render(
     () => (
-        <HopeProvider  config={config}>
+        <HopeProvider config={config}>
             <NotificationsProvider placement="top-end">
-            <Router>
-                <App />
-            </Router>
+                <Router>
+                    <App />
+                </Router>
             </NotificationsProvider>
         </HopeProvider>
     ),

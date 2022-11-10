@@ -1,14 +1,11 @@
-import { onMount, Show, createSignal, Switch, Match, createEffect, For } from 'solid-js';
+import { onMount, createSignal, Switch, Match, createEffect, For } from 'solid-js';
 
 import RecordViewList from '../components/RecordViewList';
-import TransitionsModal from '../components/Modal';
 import Camera from '../components/Camera';
-import { createStore, SetStoreFunction, Store } from "solid-js/store";
 import NextButton from '../assets/next-button.svg';
 import PreviousButton from '../assets/previous-button.svg';
 import { notificationService } from '@hope-ui/solid'
 import { makeid, getUrlSearchParam } from '../utils';
-import CustomModal from '../components/Modal';
 
 export type RecordType = {
     index: number,
@@ -16,6 +13,7 @@ export type RecordType = {
     time: number,
     status: number,
 }
+
 
 export type CameraType = {
     index: number,
@@ -26,10 +24,11 @@ export type CameraType = {
 
 const RecordDashboard = () => {
     // scripts list
-    const scripts = [];
-    const scriptIds = [];
-    const CSV_FILE_PATH = './name.csv';
+    const scripts: String[] = [];
+    const scriptIds: number[] = [];
+    const CSV_FILE_PATH: string = './name.csv';
     const recordingStack: number[] = [];
+
     // Statistics
     const [getMturkID, setMturkID] = createSignal('a23AD2e')
     const [getTotalRecorded, setTotalRecorded] = createSignal(1503)
@@ -42,7 +41,7 @@ const RecordDashboard = () => {
     const [getCurrentIndex, setCurrentIndex] = createSignal(0)
     const [getMaxRow, setMaxRow] = createSignal(7)
     const [getMaxColumn, setMaxColumn] = createSignal(4)
-    let totalCount = 100
+    let totalCount: number
 
     // Video Recording
     const [getDeviceFound, setDeviceFound] = createSignal(false)
@@ -50,6 +49,8 @@ const RecordDashboard = () => {
     const [getElapsedTime, setElapsedTime] = createSignal(0)
     const [changeData, setChangeData] = createSignal(-1)
     const [getRecordStatus, setRecordStatus] = createSignal(0)
+
+    const [getIsPlaying, setIsPlaying] = createSignal(false)
     let initRecordsData: RecordType[] = [];
 
     // Camera lists
@@ -63,16 +64,10 @@ const RecordDashboard = () => {
     const [getMediaRecorder, setMediaRecorder] = createSignal<MediaRecorder>()
 
     // video preview
-
-    let streamStarted = false;
-    const constraints = {
-        video: { width: 1280, height: 720 },
-        audio: true
-    };
     const options = {
         audioBitsPerSecond: 128000,
         videoBitsPerSecond: 2500000,
-        mimeType: 'video/webm\;codecs=opus'
+        mimeType: 'video/webm\;codecs=pcm'
     }
 
     let chunks: Blob[] = [];
@@ -130,7 +125,7 @@ const RecordDashboard = () => {
             };
 
             let tempArr = parseCSV(text)
-            const recordArray: any = [];
+            const recordArray: string[] = [];
             for (let i = 1; i < tempArr.length; i++) {
                 if (tempArr[i][1]) {
                     recordArray.push(tempArr[i][0])
@@ -139,28 +134,31 @@ const RecordDashboard = () => {
                 }
             }
             setRecordScripts(recordArray)
+            totalCount = recordArray.length
+            const spinner: HTMLElement | null = document.getElementById('spinner')
+            spinner?.remove();
         }
 
         logFileText(CSV_FILE_PATH)
     }
 
     const getMedia = async () => {
-        if (!MediaRecorder.isTypeSupported(options['mimeType'])) options['mimeType'] = "video/ogg; codecs=opus";
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        if (!MediaRecorder.isTypeSupported(options['mimeType'])) options['mimeType'] = "video/ogg; codecs=pcm";
+        const devices: MediaDeviceInfo[] = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices: MediaDeviceInfo[] = devices.filter(device => device.kind === 'videoinput');
         if (videoDevices.length < 1) {
             notificationService.show({
                 status: "danger", /* or success, warning, danger */
-                title: "Not found device!",
+                title: "Not found any camera device!",
                 description: "Please check your camera device. 🤥",
-                duration: 3_000,
+                duration: 3000,
             });
             console.log('No device!!!');
             return;
         }
-        let camArr: any[] = [];
+        let camArr: CameraType[] = [];
         for (let i = 0; i < videoDevices.length; i++) {
-            let device = videoDevices[i];
+            let device: MediaDeviceInfo = videoDevices[i];
             if (i == 0)
                 camArr.push({ index: i, 'did': device.deviceId, state: true, 'label': device.label })
             else
@@ -194,20 +192,29 @@ const RecordDashboard = () => {
                 exact: currentCamera()
             }
         };
-        const stream = await navigator.mediaDevices.getUserMedia(updatedConstraints);
 
-        const mediaRecorder: MediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorder.ondataavailable = handleOnDataAvailable;
-        setMediaRecorder(mediaRecorder);
-        setDeviceFound(true);
-        handleStream(stream);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia(updatedConstraints);
+            const mediaRecorder: MediaRecorder = new MediaRecorder(stream, options);
+            mediaRecorder.ondataavailable = handleOnDataAvailable;
+            setMediaRecorder(mediaRecorder);
+            setDeviceFound(true);
+            handleStream(stream);
+        } catch (e) {
+            notificationService.show({
+                status: "danger", /* or success, warning, danger */
+                title: "Not found any audio or camera device!",
+                description: "Please check your audio or camera device. 🤥",
+                duration: 3000,
+            });
+        }
     };
 
     const handleStream = (stream: any) => {
-        let video = document.getElementById('cameraPreview')
+        let video: HTMLElement | any;
+        video = document.getElementById('cameraPreview')
         video.srcObject = stream;
         video.play();
-        streamStarted = true;
     };
 
     const handleOnDataAvailable = ({ data }: any) => {
@@ -252,7 +259,7 @@ const RecordDashboard = () => {
         clearInterval(recordingTimerId);
         setRecordStatus(4)
 
-        const videoBlob = new Blob(chunks, { type: 'video/webm' });
+        const videoBlob: Blob = new Blob(chunks, { type: 'video/webm' });
         setRecords([...getRecords().filter(record => record.index !== getCurrentIndex()), { index: getCurrentIndex(), time: getElapsedTime(), data: videoBlob, status: 4 }])
         localStorage.setItem('recordsData', JSON.stringify(getRecords()))
         // after recording video, move to next automatically 
@@ -276,7 +283,8 @@ const RecordDashboard = () => {
 
     const changeCamera = (eve: any) => {
         if (eve.currentTarget.value === 'none') {
-            let video = document.getElementById('cameraPreview')
+            let video: HTMLElement | any
+            video = document.getElementById('cameraPreview')
             video.srcObject = null;
             video.play();
             setDeviceFound(false)
@@ -288,8 +296,6 @@ const RecordDashboard = () => {
         startStream();
     }
 
-    const selectCamera = (evt: any) => {
-    }
 
     const onNext = () => {
         getCurrentIndex() < totalCount - 1 && setCurrentIndex(getCurrentIndex() + 1)
@@ -385,9 +391,9 @@ const RecordDashboard = () => {
     })
 
     return (
-        <div class='container dark:bg-slate-800'>
+        <div class='container dark:bg-slate-800 '>
             <div class='record-section grid lx:grid-cols-10 lg:grid-cols-8 md:grid-cols-5 sm:grid-cols-1'>
-                <div class='record-pane lx:col-span-8 lg:col-span-6 md:col-span-3 sm:col-span-1'>                    
+                <div class='record-pane lx:col-span-8 lg:col-span-6 md:col-span-3 sm:col-span-1'>
                     <div class='record-control dark:shadow-[0_4px_8px_0_rgba(255,255,255,0.2)] dark:shadow-[0_6px_20px_0_rgba(255,255,255,0.2)]'>
                         <Switch>
                             <Match when={getRecordStatus() === 1}>
@@ -409,8 +415,8 @@ const RecordDashboard = () => {
                                 </button>
                             </Match>
                         </Switch>
-                        <img src={NextButton} width="40" alt='NextButton SVG' onClick={onNext}></img>
-                        <img src={PreviousButton} width="40" alt='PreviousButton SVG' onClick={onPrev}></img>
+                        <img src={NextButton} width="32" alt='NextButton SVG' onClick={onNext}></img>
+                        <img src={PreviousButton} width="32" alt='PreviousButton SVG' onClick={onPrev}></img>
                     </div>
 
                     <RecordViewList
@@ -421,16 +427,18 @@ const RecordDashboard = () => {
                         elapsedTime={getElapsedTime()}
                         recordScripts={getRecordScripts()}
                         changeData={changeData()}
+                        getIsPlaying={getIsPlaying()}
                         recordStatus={getRecordStatus()}
                         setRecordStatus={setRecordStatus}
                         isDarkMode={getIsDarkMode()}
+                        setIsPlaying={setIsPlaying}
                         records={getRecords()}
                     />
                 </div>
                 <div class='lx:col-span-2 lg:col-span-2 md:col-span-2 sm:col-span-1'>
                     <div class='statistics-section'>
                         <div class='btn-group'>
-                            <button class='bg-primary-500 hover:bg-primary-600 btn-request-payout md:w-[150px] lg:w-[200px] xs:w-[100px]'>Payout</button>
+                            <button class='bg-primary-500 hover:bg-primary-600 btn-request-payout md:w-[150px] lg:w-[150px] xs:w-[100px]'>Payout</button>
                             <button
                                 id="theme-toggle"
                                 type="button"
@@ -464,11 +472,11 @@ const RecordDashboard = () => {
                         </div>
                         <div class='preview-div'>
                             <div class='camera-section m-1 2xl:h-200 xl:h-64 lg:h-64 md:h-48 sm:h-48 xs:h-48 2xl:w-200 xl:w-64 lg:w-64 md:w-48 sm:w-48 xs:w-48 border-2 border-black-400 dark:text-black-400 '>
-                                <video id="cameraPreview" autoplay poster="./poster.png"></video>
+                                <video id="cameraPreview" autoplay poster="./poster.png" muted={getIsPlaying() !== true}></video>
                             </div>
                         </div>
                         <div class='m-1'>
-                            <select id='camera_list' class='select-camera border-2 border-black-400 dark:text-black-400 hover:bg-black-100 dark:hover:bg-black-700 focus:outline-none  dark:focus:ring-black-700 rounded-lg dark:bg-slate-800 dark:text-white' onChange={changeCamera} onSelect={selectCamera}>
+                            <select id='camera_list' class='select-camera border-2 border-black-400 dark:text-black-400 hover:bg-black-100 dark:hover:bg-black-700 focus:outline-none  dark:focus:ring-black-700 rounded-lg dark:bg-slate-800 dark:text-white' onChange={changeCamera}>
                                 <For each={[...camera().keys()].map((e, i) => i)} fallback={<option value='none'>Not found any device.</option>}>
                                     {(column, i) => (
                                         <Camera
@@ -481,7 +489,7 @@ const RecordDashboard = () => {
                             </select>
                         </div>
                         <div class='dark:text-white truncate section-item'><div class='title truncate'>Mturk ID: </div><p class='dark:text-yellow-500 truncate'>{getMturkID()}</p></div>
-                        <div class='dark:text-white truncate section-item'><div class='title truncate'>Total Recorded: </div><p class='dark:text-yellow-500 truncate'>{getTotalRecorded()}</p></div>
+                        <div class='dark:text-white truncate section-item'><div class='title truncate'>Recorded: </div><p class='dark:text-yellow-500 truncate'>{getTotalRecorded()}</p></div>
                         <div class='dark:text-white truncate section-item'><div class='title truncate'>Earned: </div><p class='dark:text-yellow-500 truncate'>${getEarned()}</p></div>
                         <div class='dark:text-white truncate section-item'><div class='title truncate'>Balance: </div><p class='dark:text-yellow-500 truncate'>${getBalance()}</p></div>
                     </div>

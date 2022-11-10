@@ -2,7 +2,7 @@ import { Component, Suspense, For, onMount, createSignal, createEffect, Show, $D
 
 import Pagination from '../components/Pagination';
 import type { RecordType } from "../pages/Dashboard";
-import CustomModal from './Modal';
+
 
 import Microphone from '../assets/microphone.svg';
 import MicrophonePending from '../assets/microphone-pending.svg';
@@ -11,17 +11,11 @@ import MicrophoneError from '../assets/microphone-error.svg';
 import MicrophoneWhite from '../assets/microphone-white.svg';
 import PlayButton from '../assets/play-button.svg';
 import StopButton from '../assets/stop-button.svg';
-import AudioAnimation from '../assets/audio-animation.gif';
-import { createStore, SetStoreFunction, Store } from "solid-js/store";
 import {
   Modal,
   ModalBody,
-  ModalCloseButton,
   ModalContent,
-  ModalFooter,
-  ModalHeader,
   ModalOverlay,
-  Button,
   createDisclosure,
 } from "@hope-ui/solid"
 import { toMMSS } from "../utils";
@@ -37,7 +31,9 @@ export type RecordViewListProps = {
   recordStatus: number;
   changeData: number;
   isDarkMode: boolean;
+  getIsPlaying: boolean;
   setRecordStatus: (status: number) => void;
+  setIsPlaying: (status: boolean) => void;
 }
 
 const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListProps) => {
@@ -45,7 +41,7 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
   const [getSubListWidth, setSubListWidth] = createSignal('col-12')
   const [getMaxLength, setMaxLength] = createSignal(0)
   const [getLastPage, setLastPage] = createSignal(0)
-  const [getIsPlaying, setIsPlaying] = createSignal(false)
+
   const [getCurrentRecord, setCurrentRecord] = createSignal<RecordType>()
   const [getPlayingTime, setPlayingTime] = createSignal(0)
   const [openModal, setOpenModal] = createSignal(false);
@@ -53,7 +49,7 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
 
   const { isOpen, onOpen } = createDisclosure()
   let playingTimerId: number;
-  let video: HTMLMediaElement;
+  let video: HTMLMediaElement | any;
 
   const setActive = (index: number) => {
     props.setCurrentIndex(index)
@@ -65,7 +61,7 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
   }
 
   const onPlay = (index: number) => {
-    setIsPlaying(true);
+    props.setIsPlaying(true);
     setModalShow(true);
     props.setRecordStatus(3)
 
@@ -73,21 +69,17 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
       setPlayingTime(getPlayingTime() + 1);
     }, 1000);
 
-    const videoBlob = props.records.filter(record => record.index === index)[0].data
+    const videoBlob: Blob = props.records.filter(record => record.index === index)[0].data
 
-    const videoUrl = URL.createObjectURL(videoBlob);
+    const videoUrl: string = URL.createObjectURL(videoBlob);
+
     video = document.getElementById('modal-video');
-
     video.src = videoUrl;
     video.play();
   }
-
-  const onClose = () => {
-
-  }
   const onStop = () => {
     setModalShow(false);
-    setIsPlaying(false);
+    props.setIsPlaying(false);
     props.setRecordStatus(0)
     clearInterval(playingTimerId)
     setPlayingTime(0)
@@ -105,7 +97,6 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
 
 
   createEffect(() => {
-    // getPlayingTime() - 1 == getCurrentRecord()?.time && onStop()
   })
 
   createEffect(() => {
@@ -117,6 +108,10 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
 
   return (
     <div class="record-content">
+      <svg id='spinner' class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
       <Suspense fallback={<div class="record-preview">Loading records...</div>}>
         <div class="record-view-list">
           <For
@@ -155,11 +150,10 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
                           </Show>
                           <Show when={getCurrentRecord()}>
                             {(props.recordStatus === 0 || props.recordStatus === 3) && <h5>{toMMSS(getCurrentRecord()!.time)}</h5>}
-                            <Show when={!getIsPlaying() && props.recordStatus !== 1}>
+                            <Show when={!props.getIsPlaying && props.recordStatus !== 1}>
                               <img src={PlayButton} width="30" height="30" alt="Playbutton SVG" class="ml-2" onClick={[onPlay, props.currentIndex]}></img>
                             </Show>
-                            <Show when={getIsPlaying()}>
-                              {/* <img src={AudioAnimation} width="60" height="50" class="max-h-12" alt="AudioAnimation GIF" /> */}
+                            <Show when={props.getIsPlaying}>
                               <img src={StopButton} width="30" height="30" class="ml-2" alt="StopButton SVG" onClick={onStop}></img>
                             </Show>
                           </Show>

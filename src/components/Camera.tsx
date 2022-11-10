@@ -1,4 +1,4 @@
-import { splitProps, JSX, Show, For, Component } from 'solid-js';
+import { JSX, Component } from 'solid-js';
 
 export type CameraProps = JSX.HTMLAttributes<HTMLAnchorElement> & {
     state?: boolean;
