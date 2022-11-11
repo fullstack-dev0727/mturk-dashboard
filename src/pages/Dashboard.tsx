@@ -1,17 +1,20 @@
 import { onMount, createSignal, Switch, Match, createEffect, For } from 'solid-js';
-
+import axios from "axios"
 import RecordViewList from '../components/RecordViewList';
 import Camera from '../components/Camera';
 import NextButton from '../assets/next-button.svg';
 import PreviousButton from '../assets/previous-button.svg';
 import { notificationService } from '@hope-ui/solid'
 import { makeid, getUrlSearchParam } from '../utils';
+import { UploadFileToS3Bucket, GetFilsFromS3Bucket } from '../utils/Url';
 
 export type RecordType = {
     index: number,
     data: Blob
     time: number,
     status: number,
+    title: string,
+    url: string | null,
 }
 
 
@@ -24,16 +27,16 @@ export type CameraType = {
 
 const RecordDashboard = () => {
     // scripts list
-    const scripts: String[] = [];
+    const scripts: string[] = [];
     const scriptIds: number[] = [];
     const CSV_FILE_PATH: string = './name.csv';
     const recordingStack: number[] = [];
 
     // Statistics
     const [getMturkID, setMturkID] = createSignal('a23AD2e')
-    const [getTotalRecorded, setTotalRecorded] = createSignal(1503)
-    const [getEarned, setEarned] = createSignal(75.15)
-    const [getBalance, setBalance] = createSignal(75.15)
+    const [getTotalRecorded, setTotalRecorded] = createSignal(0)
+    const [getEarned, setEarned] = createSignal(0)
+    const [getBalance, setBalance] = createSignal(0)
     const [getIsDarkMode, setIsDarkMode] = createSignal(false)
 
     // Record Views
@@ -44,6 +47,7 @@ const RecordDashboard = () => {
     let totalCount: number
 
     // Video Recording
+    const [mediaChunks, setMediaChunks] = createSignal<Blob[]>([])
     const [getDeviceFound, setDeviceFound] = createSignal(false)
     const [getRecordingId, setRecordingId] = createSignal('')
     const [getElapsedTime, setElapsedTime] = createSignal(0)
@@ -52,6 +56,7 @@ const RecordDashboard = () => {
 
     const [getIsPlaying, setIsPlaying] = createSignal(false)
     let initRecordsData: RecordType[] = [];
+    const [onLoading, setOnLoading] = createSignal(false)
 
     // Camera lists
     const [camera, setCamera] = createSignal<CameraType[]>([]);
@@ -85,7 +90,7 @@ const RecordDashboard = () => {
         }
     }
     const getDataWithAPI = () => {
-
+        setOnLoading(true)
         const logFileText = async (file: RequestInfo | URL) => {
             const response = await fetch(file)
             const text = await response.text()
@@ -135,8 +140,7 @@ const RecordDashboard = () => {
             }
             setRecordScripts(recordArray)
             totalCount = recordArray.length
-            const spinner: HTMLElement | null = document.getElementById('spinner')
-            spinner?.remove();
+            setOnLoading(false)
         }
 
         logFileText(CSV_FILE_PATH)
@@ -168,7 +172,7 @@ const RecordDashboard = () => {
         setCurrentCamera(camArr.filter(cam => cam.state === true)[0]?.did)
         setTimeout(function () {
             startStream();
-        }, 500)
+        }, 1000)
     }
 
     const startStream = async () => {
@@ -219,7 +223,8 @@ const RecordDashboard = () => {
 
     const handleOnDataAvailable = ({ data }: any) => {
         if (data.size > 0) {
-            chunks.push(data);
+            mediaChunks().push(data)
+            // chunks.push(data);
         }
     }
 
@@ -237,6 +242,7 @@ const RecordDashboard = () => {
     const onRecord = () => {
         if (!getDeviceFound())
             return;
+        setMediaChunks([])
         recordingTimerId && clearInterval(recordingTimerId)
         setElapsedTime(0)
         setRecordStatus(1);
@@ -257,27 +263,117 @@ const RecordDashboard = () => {
         getMediaRecorder()?.stop();
         recordingStack.push(getCurrentIndex())
         clearInterval(recordingTimerId);
-        setRecordStatus(4)
+        // setRecordStatus(4)
+        const [chunk] = mediaChunks()
+        const blobProperty: BlobPropertyBag = Object.assign(
+            { type: chunk.type }, { type: "video/webm" }
+        )
+        const videoBlob = new Blob(mediaChunks(), blobProperty)
+        // const videoBlob: Blob = new Blob(chunks, { type: 'video/webm' });
 
-        const videoBlob: Blob = new Blob(chunks, { type: 'video/webm' });
-        setRecords([...getRecords().filter(record => record.index !== getCurrentIndex()), { index: getCurrentIndex(), time: getElapsedTime(), data: videoBlob, status: 4 }])
+        setRecords([...getRecords().filter(record => record.index !== getCurrentIndex()), { index: getCurrentIndex(), time: getElapsedTime(), data: videoBlob, status: 4, url: null, title: scripts[changeData()] }])
         localStorage.setItem('recordsData', JSON.stringify(getRecords()))
         // after recording video, move to next automatically 
         onNext()
-        compareWithScript(videoBlob)
+        uploadS3Bucket(changeData(), videoBlob)
+
         // saveBlob(videoBlob, `myRecording.${videoBlob.type.split('/')[1].split(';')[0]}`);
     }
 
-    const compareWithScript = (videoBlob: Blob) => {
+    const uploadS3Bucket = async (index: number, videoBlob: Blob) => {
+
+        let uploadURL: string = UploadFileToS3Bucket + 'mturk_id=' + getMturkID() + '&transcript=' + scripts[index] + '&transcript_id=' + index
+        let formData = new FormData()
+        formData.append('data', videoBlob, scripts[index] + '.wav')
+        // formData.append('mturk_id', getMturkID())
+        // formData.append('transcript', scripts[index])
+        // formData.append('transcript_id', index.toString())
+        
+        try {
+            let res = await fetch(uploadURL, {
+                method: 'POST',
+                body: formData,
+            })
+            let response = await res.json()
+            console.log(response)
+            if (response.code == 200) {
+                // callback and reload the main city
+                notificationService.show({
+                    status: "success", /* or success, warning, danger */
+                    title: "Successfully uploaded!",
+                    duration: 1500,
+                });
+                compareWithScript(response.result?.url, parseInt(response.result?.transcript_id), 2)
+            }
+            else {
+                notificationService.show({
+                    status: "danger", /* or success, warning, danger */
+                    title: "Upload failed!",
+                    description: "Please retry! 🤥",
+                    duration: 1500,
+                });
+                compareWithScript('', parseInt(response.result?.transcript_id), 5)
+            }
+        } catch (e) {
+            console.error(e); // 30
+            notificationService.show({
+                status: "danger", /* or success, warning, danger */
+                title: "Upload failed!",
+                description: "Please retry! 🤥",
+                duration: 1500,
+            });
+        }
+
+        // axios
+        //     .post(uploadUrl, {
+        //         body : formData,
+        //         headers: {
+        //             'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW'
+        //         }
+        //     })
+        //     .then((response) => {
+        //         console.log('transferNftToColony', response.data)
+        //         if (response.data.code == 200) {
+        //             // callback and reload the main city
+        //             notificationService.show({
+        //                 status: "success", /* or success, warning, danger */
+        //                 title: "Successfully uploaded!",
+        //                 duration: 1500,
+        //             });
+        //             compareWithScript(JSON.parse(JSON.stringify(response.data.result))?.url, 2)
+        //         }
+        //         else {
+        //             notificationService.show({
+        //                 status: "danger", /* or success, warning, danger */
+        //                 title: "Upload failed!",
+        //                 description: "Please retry! 🤥",
+        //                 duration: 1500,
+        //             });
+        //             compareWithScript('', 5)
+        //         }
+        //     })
+        //     .catch((error) => {
+        //         compareWithScript('', 5)
+        //         notificationService.show({
+        //             status: "danger", /* or success, warning, danger */
+        //             title: "Upload failed!",
+        //             description: "Please retry! 🤥",
+        //             duration: 1500,
+        //         });
+        //     });
+    }
+
+    const compareWithScript = (url: string, id: number, status: number) => {
         // saveBlob(videoBlob, `myRecording.${videoBlob.type.split('/')[1].split(';')[0]}`);
-        let status = 2;
-        if (Math.random() < 0.5)
-            status = 5;
-        let temp_index = recordingStack.shift();
+        let temp_index = id
         let data = getRecords().filter(record => record.index === temp_index)[0]
         data.status = status
-        setRecordStatus(status)
+        data.url = url
+        // setRecordStatus(status)
         setRecords([...getRecords().filter(record => record.index !== temp_index), data])
+        setTotalRecorded(getRecords().filter(record => record.status === 5)?.length)
+        setEarned(1.5 * getTotalRecorded())
+        setEarned(1.5 * getTotalRecorded())
         localStorage.setItem('recordsData', JSON.stringify(getRecords()))
     }
 
@@ -298,6 +394,7 @@ const RecordDashboard = () => {
 
 
     const onNext = () => {
+        setRecordStatus(0)
         getCurrentIndex() < totalCount - 1 && setCurrentIndex(getCurrentIndex() + 1)
     }
 
@@ -392,6 +489,11 @@ const RecordDashboard = () => {
 
     return (
         <div class='container dark:bg-slate-800 '>
+            {(onLoading()) &&
+                <div class='api-loading'>
+                    <span class='apiCallLoading'></span>
+                    <span class={'loader'}></span>
+                </div>}
             <div class='record-section grid lx:grid-cols-10 lg:grid-cols-8 md:grid-cols-5 sm:grid-cols-1'>
                 <div class='record-pane lx:col-span-8 lg:col-span-6 md:col-span-3 sm:col-span-1'>
                     <div class='record-control dark:shadow-[0_4px_8px_0_rgba(255,255,255,0.2)] dark:shadow-[0_6px_20px_0_rgba(255,255,255,0.2)]'>
@@ -475,7 +577,7 @@ const RecordDashboard = () => {
                                 <video id="cameraPreview" autoplay poster="./poster.png" muted={getIsPlaying() !== true}></video>
                             </div>
                         </div>
-                        <div class='m-1'>
+                        <div class='mb-1 camera-div'>
                             <select id='camera_list' class='select-camera border-2 border-black-400 dark:text-black-400 hover:bg-black-100 dark:hover:bg-black-700 focus:outline-none  dark:focus:ring-black-700 rounded-lg dark:bg-slate-800 dark:text-white' onChange={changeCamera}>
                                 <For each={[...camera().keys()].map((e, i) => i)} fallback={<option value='none'>Not found any device.</option>}>
                                     {(column, i) => (
@@ -488,15 +590,16 @@ const RecordDashboard = () => {
                                 </For>
                             </select>
                         </div>
-                        <div class='dark:text-white truncate section-item'><div class='title truncate'>Mturk ID: </div><p class='dark:text-yellow-500 truncate'>{getMturkID()}</p></div>
-                        <div class='dark:text-white truncate section-item'><div class='title truncate'>Recorded: </div><p class='dark:text-yellow-500 truncate'>{getTotalRecorded()}</p></div>
-                        <div class='dark:text-white truncate section-item'><div class='title truncate'>Earned: </div><p class='dark:text-yellow-500 truncate'>${getEarned()}</p></div>
-                        <div class='dark:text-white truncate section-item'><div class='title truncate'>Balance: </div><p class='dark:text-yellow-500 truncate'>${getBalance()}</p></div>
+                        <div class='dark:text-white truncate section-item'><div class='title truncate'>MturkID : </div><p class='dark:text-yellow-500 truncate'>{getMturkID()}</p></div>
+                        <div class='dark:text-white truncate section-item'><div class='title truncate'>Recorded : </div><p class='dark:text-yellow-500 truncate'>{getTotalRecorded()}</p></div>
+                        <div class='dark:text-white truncate section-item'><div class='title truncate'>Earned : </div><p class='dark:text-yellow-500 truncate'>${getEarned()}</p></div>
+                        <div class='dark:text-white truncate section-item'><div class='title truncate'>Balance : </div><p class='dark:text-yellow-500 truncate'>${getBalance()}</p></div>
                     </div>
                 </div>
             </div>
             {/* <audio class='localAudio' autoplay></audio> */}
         </div>
+
     );
 };
 

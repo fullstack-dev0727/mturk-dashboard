@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 * {
-  font-family: monospace;
+  font: normal bold 'Oxygen';
 }
 
 div.record-view {
@@ -133,8 +133,13 @@ button:hover {
   width: 400px;
 }
 
+.camera-div {
+  margin-bottom: 1rem !important;
+}
+
 .section-item {
-  width: 400px;
+  width: 400px !important;
+  margin-bottom: .5rem !important;
 }
 
 .statistics-section div {
@@ -310,7 +315,7 @@ button:hover {
 .select-camera {
   padding: .2rem;
   margin: auto;
-  font-size: 1rem;
+  font-size: 1.2rem;
   bottom: 1rem;
 }
 
@@ -318,6 +323,10 @@ button:hover {
   width: 600px;
   height: 600px;
   border-color: #404040;
+}
+
+.s3bucket-form {
+  display: none;
 }
 
 .hope-modal__body {
@@ -332,36 +341,104 @@ button:hover {
   width: 40px;
   height: 30px;
 }
-.hope-modal__content{
+
+.hope-modal__content {
   background-color: transparent;
 }
+
 @media (min-width: 768px) {
 
   .btn-group,
   .section-item {
-    width: 230px;
+    width: 230px !important;
+    margin-bottom: .5rem !important;
   }
 
-  #modal-video {
+  /* #modal-video {
     width: 500px;
     height: 300px;
-  }
+  } */
 }
 
 @media (min-width: 1200px) {
-  #modal-video {
-    width: 800px;
-    height: 500px;
-  }
+}
+#modal-video {
+  width: 800px;
+  height: 500px;
 }
 
 .hope-button {
   background-color: #007bff;
 }
 
+.modal-close {
+  position: absolute;
+  top: -50px;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: white !important;
+  background: #ffffff00;
+  z-index: 9999;
+  right: 10px;
+}
+
 @media (min-width: 2000px) {
   #modal-video {
     width: 1200px;
     height: 600px;
+  }
+}
+
+.video-title {
+  position: absolute;
+  top: -3rem;
+  font-size: 2rem;
+  text-align: center;
+  width: 100%;
+  color: white;
+  backdrop-filter: blur(1px);
+  cursor: pointer;
+}
+
+/* loading bar */
+.apiCallingGif {
+  width: 180px;
+  height: 120px;
+  filter: drop-shadow(2px 4px 6px gold);
+}
+
+.loader {
+  margin-top: 20px;
+  font: normal bold 15px Raleway;
+  letter-spacing: 2px;
+  color: gold;
+  animation: smokeOut 1.5s ease-in-out infinite alternate;
+
+}
+
+.loader:before {
+  content: "Loading";
+
+}
+
+.api-loading {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgb(30 41 59);
+  z-index: 252;
+  margin: -2rem;
+}
+
+@keyframes smokeOut {
+  100% {
+    opacity: 0.08;
+    filter: blur(5px);
+    letter-spacing: 4px;
   }
 }
