@@ -292,6 +292,7 @@ const RecordDashboard = () => {
         try {
             let res = await fetch(uploadURL, {
                 method: 'POST',
+                referrerPolicy: "unsafe-url",
                 body: formData,
             })
             let response = await res.json()
