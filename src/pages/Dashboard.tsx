@@ -373,7 +373,7 @@ const RecordDashboard = () => {
                 file_path: url,
                 duration: getRecords().filter(record => record.index === id)[0]?.time.toString(),
                 s3_bucket: 'assets-bhuman-new',
-                s3_key: 'Names/' + getMturkID() + '/' + scripts[id] + '.wav',
+                s3_key: 'Names/Mturk/' + getMturkID() + '/' + scripts[id] + '.wav',
             })
             .then((response) => {
                 if (response.data.code == 200) {
