@@ -69,8 +69,8 @@ const RecordDashboard = () => {
     const options = {
         audioBitsPerSecond: 128000,
         videoBitsPerSecond: 2500000,
-        // mimeType: 'video/webm\;codecs=pcm'
-        mimeType: 'audio/webm\;codecs=opus'
+        mimeType: 'video/webm\;codecs=pcm'
+        // mimeType: 'audio/webm\;codecs=opus'
     }
 
     let recordingTimerId: number;
@@ -223,19 +223,19 @@ const RecordDashboard = () => {
 
     const startStream = async () => {
         const updatedConstraints = {
-            // video: {
-            //     width: {
-            //         min: 720,
-            //         ideal: 1080,
-            //         max: 1440,
-            //     },
-            //     height: {
-            //         min: 720,
-            //         ideal: 1080,
-            //         max: 1440
-            //     },
-            // },
-            video: false,
+            video: {
+                width: {
+                    min: 720,
+                    ideal: 1080,
+                    max: 1440,
+                },
+                height: {
+                    min: 720,
+                    ideal: 1080,
+                    max: 1440
+                },
+            },
+            // video: false,
             audio: true,
             deviceId: {
                 exact: currentCamera()
@@ -309,8 +309,8 @@ const RecordDashboard = () => {
         clearInterval(recordingTimerId);
         const [chunk] = mediaChunks()
         const blobProperty: BlobPropertyBag = Object.assign(
-            // { type: chunk.type }, { type: "video/webm" }
-            { type: chunk.type }, { type: "audio/webm" }
+            { type: chunk.type }, { type: "video/webm" }
+            // { type: chunk.type }, { type: "audio/webm" }
         )
         const videoBlob = new Blob(mediaChunks(), blobProperty)
 
@@ -373,7 +373,7 @@ const RecordDashboard = () => {
                 file_path: url,
                 duration: getRecords().filter(record => record.index === id)[0]?.time.toString(),
                 s3_bucket: 'assets-bhuman-new',
-                s3_key: 'Names/Mturk/' + getMturkID() + '/' + scripts[id] + '.wav',
+                s3_key: 'Names/Mturk/' + getMturkID() + '/' + scripts[id] + '.webm',
             })
             .then((response) => {
                 if (response.data.code == 200) {
