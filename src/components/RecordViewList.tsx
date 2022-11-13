@@ -2,8 +2,7 @@ import { Component, Suspense, For, onMount, createSignal, createEffect, Show, $D
 
 import Pagination from '../components/Pagination';
 import type { RecordType } from "../pages/Dashboard";
-
-
+import { notificationService } from '@hope-ui/solid'
 import Microphone from '../assets/microphone.svg';
 import MicrophonePending from '../assets/microphone-pending.svg';
 import MicrophoneSuccess from '../assets/microphone-success.svg';
@@ -16,8 +15,6 @@ import {
   ModalBody,
   ModalContent,
   ModalOverlay,
-  createDisclosure,
-  ModalCloseButton,
 } from "@hope-ui/solid"
 import { toMMSS } from "../utils";
 
@@ -46,10 +43,8 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
 
   const [getCurrentRecord, setCurrentRecord] = createSignal<RecordType>()
   const [getPlayingTime, setPlayingTime] = createSignal(0)
-  const [openModal, setOpenModal] = createSignal(false);
   const [modalShow, setModalShow] = createSignal(false);
 
-  const { isOpen, onOpen } = createDisclosure()
   let playingTimerId: number;
   let video: HTMLMediaElement | any;
 
@@ -66,26 +61,30 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
   const onPlay = (index: number) => {
     props.setIsPlaying(true);
     setModalShow(true);
-    // props.setRecordStatus(3)
-
     playingTimerId = setInterval(() => {
       setPlayingTime(getPlayingTime() + 1);
     }, 1000);
 
     const item: RecordType = props.records.filter(record => record.index === index)[0]
-    console.log(item)
     const videoBlob: Blob = item?.data
     const videoUrl: string | null = item?.url == null || item?.url == '' ? URL.createObjectURL(videoBlob) : item?.url
-
-    video = document.getElementById('modal-video');
-    video.src = videoUrl;
-    setVideoTitle(item?.title)
-    video.play();
+    try {
+      video = document.getElementById('modal-video');
+      video.src = videoUrl;
+      setVideoTitle(item?.title)
+      video.play();
+    } catch (e) {
+      notificationService.show({
+        status: "danger", /* or success, warning, danger */
+        title: "No video source!",
+        description: "Please record the video! 🤥",
+        duration: 1500,
+      });
+    }
   }
   const onStop = () => {
     setModalShow(false);
     props.setIsPlaying(false);
-    // props.setRecordStatus(0)
     clearInterval(playingTimerId)
     setPlayingTime(0)
     video && video.pause();
@@ -96,9 +95,8 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
   }
 
   createEffect(() => {
-    onStop()
     setCurrentRecord(props.records.filter(record => record.index === props.currentIndex)[0])
-  })
+  }, [])
 
   createEffect(() => {
     setWidth(props.maxColumn)
@@ -168,12 +166,12 @@ const RecordViewList: Component<RecordViewListProps> = (props: RecordViewListPro
           lastPage={getLastPage()}
           setCurrentPage={setCurrentPage}
         />
-        <Modal centered size="2xl" closeOnOverlayClick={false} opened={modalShow()} onClose={onStop}>
+        <Modal centered size="2xl" closeOnOverlayClick={true} opened={modalShow()} onClose={onStop}>
           <ModalOverlay />
           <ModalContent>
-            <button class="modal-close" onClick={onStop}>
-              <svg class="hope-icon hope-c-XNyZK hope-c-PJLV hope-c-PJLV-ijhzIfm-css" viewBox="0 0 18 18"><path fill="currentColor" d="M2.64 1.27L7.5 6.13l4.84-4.84A.92.92 0 0 1 13 1a1 1 0 0 1 1 1a.9.9 0 0 1-.27.66L8.84 7.5l4.89 4.89A.9.9 0 0 1 14 13a1 1 0 0 1-1 1a.92.92 0 0 1-.69-.27L7.5 8.87l-4.85 4.85A.92.92 0 0 1 2 14a1 1 0 0 1-1-1a.9.9 0 0 1 .27-.66L6.16 7.5L1.27 2.61A.9.9 0 0 1 1 2a1 1 0 0 1 1-1c.24.003.47.1.64.27z"></path></svg>
-            </button>
+            {/* <button class="modal-close" onClick={onStop}>
+              <svg class="hope-icon hope-c-XNyZK hope-c-PJLV hope-c-PJLV-ijhzIfm-css" viewBox="0 0 16 16"><path fill="currentColor" d="M2.64 1.27L7.5 6.13l4.84-4.84A.92.92 0 0 1 13 1a1 1 0 0 1 1 1a.9.9 0 0 1-.27.66L8.84 7.5l4.89 4.89A.9.9 0 0 1 14 13a1 1 0 0 1-1 1a.92.92 0 0 1-.69-.27L7.5 8.87l-4.85 4.85A.92.92 0 0 1 2 14a1 1 0 0 1-1-1a.9.9 0 0 1 .27-.66L6.16 7.5L1.27 2.61A.9.9 0 0 1 1 2a1 1 0 0 1 1-1c.24.003.47.1.64.27z"></path></svg>
+            </button> */}
             <ModalBody>
               <video controls class='border-2 border-black-400 dark:text-black-400 hover:bg-black-100 dark:hover:bg-black-700 focus:outline-none  dark:focus:ring-black-700 dark:bg-slate-800 rounded-lg' id='modal-video' poster="./poster.png"></video>
               <p class="video-title">{videoTitle()}</p>

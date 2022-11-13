@@ -1,12 +1,12 @@
 import { onMount, createSignal, Switch, Match, createEffect, For } from 'solid-js';
-import axios from "axios"
 import RecordViewList from '../components/RecordViewList';
 import Camera from '../components/Camera';
+import axios from "axios";
 import NextButton from '../assets/next-button.svg';
 import PreviousButton from '../assets/previous-button.svg';
-import { notificationService } from '@hope-ui/solid'
+import { notificationService, Tooltip } from '@hope-ui/solid'
 import { makeid, getUrlSearchParam } from '../utils';
-import { UploadFileToS3Bucket, GetFilsFromS3Bucket } from '../utils/Url';
+import { UploadFileToS3Bucket, FetchMTurkRecordData, SendS3UrlToServer } from '../utils/Url';
 
 export type RecordType = {
     index: number,
@@ -61,9 +61,6 @@ const RecordDashboard = () => {
     // Camera lists
     const [camera, setCamera] = createSignal<CameraType[]>([]);
     const [currentCamera, setCurrentCamera] = createSignal('-1')
-    // if (localStorage.getItem('recordsData') && localStorage.getItem('recordsData')?.trim()){
-    //     initRecordsData = JSON.parse(localStorage.getItem('recordsData'));
-    // }
 
     const [getRecords, setRecords] = createSignal<RecordType[]>(initRecordsData)
     const [getMediaRecorder, setMediaRecorder] = createSignal<MediaRecorder>()
@@ -72,10 +69,10 @@ const RecordDashboard = () => {
     const options = {
         audioBitsPerSecond: 128000,
         videoBitsPerSecond: 2500000,
-        mimeType: 'video/webm\;codecs=pcm'
+        // mimeType: 'video/webm\;codecs=pcm'
+        mimeType: 'audio/webm\;codecs=opus'
     }
 
-    let chunks: Blob[] = [];
     let recordingTimerId: number;
 
     if (localStorage.getItem('color-theme')) {
@@ -140,11 +137,60 @@ const RecordDashboard = () => {
             }
             setRecordScripts(recordArray)
             totalCount = recordArray.length
-            setOnLoading(false)
+
+            // get mturkrecorddata from server
+            getInitData(FetchMTurkRecordData)
         }
 
         logFileText(CSV_FILE_PATH)
     }
+    const getInitData = async (url: string) => {
+        let formData = new FormData()
+        formData.append('mturk_id', getMturkID())
+        axios
+            .post(url, {
+                mturk_id: getMturkID(),
+            })
+            .then((response) => {
+                if (response.data.code == 200) {
+                    const initData = response.data.result
+                    let temp: RecordType[] = []
+                    for (let i = 0; i < initData.length; i++) {
+                        let item: RecordType = {
+                            index: parseInt(initData[i].transcript_id),
+                            title: initData[i].transcript,
+                            status: initData[i].status == 0 ? 2 : (initData[i].status == 1 ? 5 : 4),
+                            url: initData[i].file_path,
+                            time: initData[i].duration,
+                            data: new Blob()
+                        }
+
+                        temp.push(item)
+                    }
+                    setRecords(temp)
+                    setTotalRecorded(getRecords().filter(record => record.status === 2)?.length)
+                }
+                else {
+                    notificationService.show({
+                        status: "danger", /* or success, warning, danger */
+                        title: "Failed to get init data!",
+                        description: "Refresh the page! 🤥",
+                        duration: 1500,
+                    });
+                }
+                setOnLoading(false)
+            })
+            .catch((error) => {
+                setOnLoading(false)
+                notificationService.show({
+                    status: "danger", /* or success, warning, danger */
+                    title: "Connection error!",
+                    description: "Refresh the page! 🤥",
+                    duration: 1500,
+                });
+            });
+    }
+
 
     const getMedia = async () => {
         if (!MediaRecorder.isTypeSupported(options['mimeType'])) options['mimeType'] = "video/ogg; codecs=pcm";
@@ -176,21 +222,20 @@ const RecordDashboard = () => {
     }
 
     const startStream = async () => {
-        // if (currentCamera() == 'none')
-        //     return;
         const updatedConstraints = {
-            video: {
-                width: {
-                    min: 720,
-                    ideal: 1080,
-                    max: 1440,
-                },
-                height: {
-                    min: 720,
-                    ideal: 1080,
-                    max: 1440
-                },
-            },
+            // video: {
+            //     width: {
+            //         min: 720,
+            //         ideal: 1080,
+            //         max: 1440,
+            //     },
+            //     height: {
+            //         min: 720,
+            //         ideal: 1080,
+            //         max: 1440
+            //     },
+            // },
+            video: false,
             audio: true,
             deviceId: {
                 exact: currentCamera()
@@ -209,7 +254,7 @@ const RecordDashboard = () => {
                 status: "danger", /* or success, warning, danger */
                 title: "Not found any audio or camera device!",
                 description: "Please check your audio or camera device. 🤥",
-                duration: 3000,
+                duration: 2000,
             });
         }
     };
@@ -224,7 +269,6 @@ const RecordDashboard = () => {
     const handleOnDataAvailable = ({ data }: any) => {
         if (data.size > 0) {
             mediaChunks().push(data)
-            // chunks.push(data);
         }
     }
 
@@ -263,16 +307,14 @@ const RecordDashboard = () => {
         getMediaRecorder()?.stop();
         recordingStack.push(getCurrentIndex())
         clearInterval(recordingTimerId);
-        // setRecordStatus(4)
         const [chunk] = mediaChunks()
         const blobProperty: BlobPropertyBag = Object.assign(
-            { type: chunk.type }, { type: "video/webm" }
+            // { type: chunk.type }, { type: "video/webm" }
+            { type: chunk.type }, { type: "audio/webm" }
         )
         const videoBlob = new Blob(mediaChunks(), blobProperty)
-        // const videoBlob: Blob = new Blob(chunks, { type: 'video/webm' });
 
         setRecords([...getRecords().filter(record => record.index !== getCurrentIndex()), { index: getCurrentIndex(), time: getElapsedTime(), data: videoBlob, status: 4, url: null, title: scripts[changeData()] }])
-        localStorage.setItem('recordsData', JSON.stringify(getRecords()))
         // after recording video, move to next automatically 
         onNext()
         uploadS3Bucket(changeData(), videoBlob)
@@ -284,27 +326,22 @@ const RecordDashboard = () => {
 
         let uploadURL: string = UploadFileToS3Bucket + 'mturk_id=' + getMturkID() + '&transcript=' + scripts[index] + '&transcript_id=' + index
         let formData = new FormData()
-        formData.append('data', videoBlob, scripts[index] + '.wav')
-        // formData.append('mturk_id', getMturkID())
-        // formData.append('transcript', scripts[index])
-        // formData.append('transcript_id', index.toString())
-        
+        formData.append('data', videoBlob, scripts[index] + '.webm')
+
         try {
             let res = await fetch(uploadURL, {
                 method: 'POST',
-                referrerPolicy: "unsafe-url",
                 body: formData,
             })
             let response = await res.json()
-            console.log(response)
             if (response.code == 200) {
                 // callback and reload the main city
-                notificationService.show({
-                    status: "success", /* or success, warning, danger */
-                    title: "Successfully uploaded!",
-                    duration: 1500,
-                });
-                compareWithScript(response.result?.url, parseInt(response.result?.transcript_id), 2)
+                // notificationService.show({
+                //     status: "success", /* or success, warning, danger */
+                //     title: "Upload success!",
+                //     duration: 1500,
+                // });
+                compareWithScript(response.result?.url, parseInt(response.result?.transcript_id))
             }
             else {
                 notificationService.show({
@@ -313,7 +350,6 @@ const RecordDashboard = () => {
                     description: "Please retry! 🤥",
                     duration: 1500,
                 });
-                compareWithScript('', parseInt(response.result?.transcript_id), 5)
             }
         } catch (e) {
             console.error(e); // 30
@@ -324,58 +360,54 @@ const RecordDashboard = () => {
                 duration: 1500,
             });
         }
-
-        // axios
-        //     .post(uploadUrl, {
-        //         body : formData,
-        //         headers: {
-        //             'Content-Type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW'
-        //         }
-        //     })
-        //     .then((response) => {
-        //         console.log('transferNftToColony', response.data)
-        //         if (response.data.code == 200) {
-        //             // callback and reload the main city
-        //             notificationService.show({
-        //                 status: "success", /* or success, warning, danger */
-        //                 title: "Successfully uploaded!",
-        //                 duration: 1500,
-        //             });
-        //             compareWithScript(JSON.parse(JSON.stringify(response.data.result))?.url, 2)
-        //         }
-        //         else {
-        //             notificationService.show({
-        //                 status: "danger", /* or success, warning, danger */
-        //                 title: "Upload failed!",
-        //                 description: "Please retry! 🤥",
-        //                 duration: 1500,
-        //             });
-        //             compareWithScript('', 5)
-        //         }
-        //     })
-        //     .catch((error) => {
-        //         compareWithScript('', 5)
-        //         notificationService.show({
-        //             status: "danger", /* or success, warning, danger */
-        //             title: "Upload failed!",
-        //             description: "Please retry! 🤥",
-        //             duration: 1500,
-        //         });
-        //     });
     }
 
-    const compareWithScript = (url: string, id: number, status: number) => {
-        // saveBlob(videoBlob, `myRecording.${videoBlob.type.split('/')[1].split(';')[0]}`);
-        let temp_index = id
-        let data = getRecords().filter(record => record.index === temp_index)[0]
-        data.status = status
+    const compareWithScript = async (url: string, id: number) => {
+        let data = getRecords().filter(record => record.index === id)[0]
         data.url = url
-        // setRecordStatus(status)
-        setRecords([...getRecords().filter(record => record.index !== temp_index), data])
-        setTotalRecorded(getRecords().filter(record => record.status === 5)?.length)
-        setEarned(1.5 * getTotalRecorded())
-        setEarned(1.5 * getTotalRecorded())
-        localStorage.setItem('recordsData', JSON.stringify(getRecords()))
+        axios
+            .post(SendS3UrlToServer, {
+                mturk_id: getMturkID(),
+                transcript: scripts[id],
+                transcript_id: id.toString(),
+                file_path: url,
+                duration: getRecords().filter(record => record.index === id)[0]?.time,
+                s3_bucket: 'assets-bhuman-new',
+                s3_key: 'Names/' + getMturkID() + '/' + scripts[id] + '.wav',
+            })
+            .then((response) => {
+                if (response.data.code == 200) {
+                    // callback and reload the main city
+                    notificationService.show({
+                        status: "success", /* or success, warning, danger */
+                        title: response.data.result?.success,
+                        duration: 1500,
+                    });
+                    // setRecordStatus(status)
+                    data.status = 2
+                    data.time = response.data.result?.time
+                }
+                else {
+                    notificationService.show({
+                        status: "danger", /* or success, warning, danger */
+                        title: "Upload failed!",
+                        description: "Please retry! 🤥",
+                        duration: 1500,
+                    });
+                    data.status = 5
+                }
+                setRecords([...getRecords().filter(record => record.index !== id), data])
+                setTotalRecorded(getRecords().filter(record => record.status === 2)?.length)
+            })
+            .catch((error) => {
+                console.error(error); // 30
+                notificationService.show({
+                    status: "danger", /* or success, warning, danger */
+                    title: "Upload failed!",
+                    description: "Please retry! 🤥",
+                    duration: 1500,
+                });
+            });
     }
 
     const changeCamera = (eve: any) => {
@@ -479,6 +511,10 @@ const RecordDashboard = () => {
             getMediaRecorder()?.stop();
     }, getCurrentIndex())
 
+    createEffect((prev) => {
+        setEarned(1.5 * getTotalRecorded())
+        setBalance(1.5 * getTotalRecorded())
+    }, [getTotalRecorded()])
 
     onMount(() => {
         getDataWithAPI()
@@ -491,7 +527,7 @@ const RecordDashboard = () => {
     return (
         <div class='container dark:bg-slate-800 '>
             {(onLoading()) &&
-                <div class='api-loading'>
+                <div class='api-loading dark:bg-slate-800'>
                     <span class='apiCallLoading'></span>
                     <span class={'loader'}></span>
                 </div>}
@@ -500,26 +536,34 @@ const RecordDashboard = () => {
                     <div class='record-control dark:shadow-[0_4px_8px_0_rgba(255,255,255,0.2)] dark:shadow-[0_6px_20px_0_rgba(255,255,255,0.2)]'>
                         <Switch>
                             <Match when={getRecordStatus() === 1}>
-                                <button class='w-8' onClick={onSave}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewBox="0 0 100 100">
-                                        <circle style="fill:#ffffff;" cx="50" cy="50" r="50" />
-                                        <circle cx="50" cy="50" r="40" fill="none" stroke="#d92176" stroke-width="20" stroke-miterlimit="10" />
-                                        <circle cx="50" cy="50" r="21" fill="#d92176" />
-                                    </svg>
-                                </button>
+                                <Tooltip placement="right-start" label='Record' withArrow>
+                                    <button class='w-8' onClick={onSave}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewBox="0 0 100 100">
+                                            <circle style="fill:#ffffff;" cx="50" cy="50" r="50" />
+                                            <circle cx="50" cy="50" r="40" fill="none" stroke="#d92176" stroke-width="20" stroke-miterlimit="10" />
+                                            <circle cx="50" cy="50" r="21" fill="#d92176" />
+                                        </svg>
+                                    </button>
+                                </Tooltip>
                             </Match>
                             <Match when={getRecordStatus() !== 1}>
-                                <button class='w-8' classList={{ disabled: getRecordStatus() === 3 }} onClick={onRecord}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewBox="0 0 100 100">
-                                        <circle style="fill:#ffffff;" cx="50" cy="50" r="50" />
-                                        <circle cx="50" cy="50" r="40" fill="none" stroke="#007bff" stroke-width="20" stroke-miterlimit="10" />
-                                        <circle cx="50" cy="50" r="21" fill="#007bff" />
-                                    </svg>
-                                </button>
+                                <Tooltip placement="right-start" label='Stop' withArrow>
+                                    <button class='w-8' classList={{ disabled: getRecordStatus() === 3 }} onClick={onRecord}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewBox="0 0 100 100">
+                                            <circle style="fill:#ffffff;" cx="50" cy="50" r="50" />
+                                            <circle cx="50" cy="50" r="40" fill="none" stroke="#007bff" stroke-width="20" stroke-miterlimit="10" />
+                                            <circle cx="50" cy="50" r="21" fill="#007bff" />
+                                        </svg>
+                                    </button>
+                                </Tooltip>
                             </Match>
                         </Switch>
-                        <img src={NextButton} width="32" alt='NextButton SVG' onClick={onNext}></img>
-                        <img src={PreviousButton} width="32" alt='PreviousButton SVG' onClick={onPrev}></img>
+                        <Tooltip placement="right-start" label='Next' withArrow>
+                            <img src={NextButton} width="32" alt='NextButton SVG' onClick={onNext}></img>
+                        </Tooltip>
+                        <Tooltip placement="right-start" label='Previous' withArrow>
+                            <img src={PreviousButton} width="32" alt='PreviousButton SVG' onClick={onPrev}></img>
+                        </Tooltip>
                     </div>
 
                     <RecordViewList

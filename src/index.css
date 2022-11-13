@@ -4,6 +4,7 @@
 
 * {
   font: normal bold 'Oxygen';
+  font-weight: 700;
 }
 
 div.record-view {
@@ -360,8 +361,8 @@ button:hover {
   } */
 }
 
-@media (min-width: 1200px) {
-}
+@media (min-width: 1200px) {}
+
 #modal-video {
   width: 800px;
   height: 500px;
@@ -410,7 +411,7 @@ button:hover {
 
 .loader {
   margin-top: 20px;
-  font: normal bold 15px Raleway;
+  font: normal bold 3rem Raleway;
   letter-spacing: 2px;
   color: gold;
   animation: smokeOut 1.5s ease-in-out infinite alternate;
@@ -418,7 +419,7 @@ button:hover {
 }
 
 .loader:before {
-  content: "Loading";
+  content: "Loading...";
 
 }
 
@@ -430,7 +431,7 @@ button:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgb(30 41 59);
+  background: rgb(255, 255, 255);
   z-index: 252;
   margin: -2rem;
 }
