@@ -371,7 +371,7 @@ const RecordDashboard = () => {
                 transcript: scripts[id],
                 transcript_id: id.toString(),
                 file_path: url,
-                duration: getRecords().filter(record => record.index === id)[0]?.time,
+                duration: getRecords().filter(record => record.index === id)[0]?.time.toString(),
                 s3_bucket: 'assets-bhuman-new',
                 s3_key: 'Names/' + getMturkID() + '/' + scripts[id] + '.wav',
             })
