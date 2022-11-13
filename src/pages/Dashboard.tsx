@@ -385,7 +385,6 @@ const RecordDashboard = () => {
                     });
                     // setRecordStatus(status)
                     data.status = 2
-                    data.time = response.data.result?.time
                 }
                 else {
                     notificationService.show({
