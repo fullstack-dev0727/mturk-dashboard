@@ -344,21 +344,21 @@ const RecordDashboard = () => {
                 compareWithScript(response.result?.url, parseInt(response.result?.transcript_id))
             }
             else {
-                notificationService.show({
-                    status: "danger", /* or success, warning, danger */
-                    title: "Upload failed!",
-                    description: "Please retry! 🤥",
-                    duration: 1500,
-                });
+                // notificationService.show({
+                //     status: "danger", /* or success, warning, danger */
+                //     title: "Upload failed!",
+                //     description: "Please retry! 🤥",
+                //     duration: 1500,
+                // });
             }
         } catch (e) {
             console.error(e); // 30
-            notificationService.show({
-                status: "danger", /* or success, warning, danger */
-                title: "Upload failed!",
-                description: "Please retry! 🤥",
-                duration: 1500,
-            });
+            // notificationService.show({
+            //     status: "danger", /* or success, warning, danger */
+            //     title: "Upload failed!",
+            //     description: "Please retry! 🤥",
+            //     duration: 1500,
+            // });
         }
     }
 
@@ -378,21 +378,21 @@ const RecordDashboard = () => {
             .then((response) => {
                 if (response.data.code == 200) {
                     // callback and reload the main city
-                    notificationService.show({
-                        status: "success", /* or success, warning, danger */
-                        title: response.data.result?.success,
-                        duration: 1500,
-                    });
+                    // notificationService.show({
+                    //     status: "success", /* or success, warning, danger */
+                    //     title: response.data.result?.success,
+                    //     duration: 1500,
+                    // });
                     // setRecordStatus(status)
                     data.status = 2
                 }
                 else {
-                    notificationService.show({
-                        status: "danger", /* or success, warning, danger */
-                        title: "Upload failed!",
-                        description: "Please retry! 🤥",
-                        duration: 1500,
-                    });
+                    // notificationService.show({
+                    //     status: "danger", /* or success, warning, danger */
+                    //     title: "Upload failed!",
+                    //     description: "Please retry! 🤥",
+                    //     duration: 1500,
+                    // });
                     data.status = 5
                 }
                 setRecords([...getRecords().filter(record => record.index !== id), data])
@@ -400,12 +400,12 @@ const RecordDashboard = () => {
             })
             .catch((error) => {
                 console.error(error); // 30
-                notificationService.show({
-                    status: "danger", /* or success, warning, danger */
-                    title: "Upload failed!",
-                    description: "Please retry! 🤥",
-                    duration: 1500,
-                });
+                // notificationService.show({
+                //     status: "danger", /* or success, warning, danger */
+                //     title: "Upload failed!",
+                //     description: "Please retry! 🤥",
+                //     duration: 1500,
+                // });
             });
     }
 
