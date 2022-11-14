@@ -535,7 +535,7 @@ const RecordDashboard = () => {
                     <div class='record-control dark:shadow-[0_4px_8px_0_rgba(255,255,255,0.2)] dark:shadow-[0_6px_20px_0_rgba(255,255,255,0.2)]'>
                         <Switch>
                             <Match when={getRecordStatus() === 1}>
-                                <Tooltip placement="right-start" label='Record' withArrow>
+                                <Tooltip placement="right-start" label='Stop' withArrow>
                                     <button class='w-8' onClick={onSave}>
                                         <svg xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewBox="0 0 100 100">
                                             <circle style="fill:#ffffff;" cx="50" cy="50" r="50" />
@@ -546,7 +546,7 @@ const RecordDashboard = () => {
                                 </Tooltip>
                             </Match>
                             <Match when={getRecordStatus() !== 1}>
-                                <Tooltip placement="right-start" label='Stop' withArrow>
+                                <Tooltip placement="right-start" label='Record' withArrow>
                                     <button class='w-8' classList={{ disabled: getRecordStatus() === 3 }} onClick={onRecord}>
                                         <svg xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewBox="0 0 100 100">
                                             <circle style="fill:#ffffff;" cx="50" cy="50" r="50" />
