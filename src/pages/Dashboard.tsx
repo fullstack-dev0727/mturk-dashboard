@@ -74,6 +74,7 @@ const RecordDashboard = () => {
     }
 
     let recordingTimerId: number;
+    let recordingMTime: number;
 
     if (localStorage.getItem('color-theme')) {
         if (localStorage.getItem('color-theme') === 'dark') {
@@ -224,6 +225,7 @@ const RecordDashboard = () => {
     const startStream = async () => {
         const updatedConstraints = {
             video: {
+                
                 width: {
                     min: 720,
                     ideal: 1080,
@@ -284,6 +286,7 @@ const RecordDashboard = () => {
     }
 
     const onRecord = () => {
+        recordingMTime = 0;
         if (!getDeviceFound())
             return;
         setMediaChunks([])
@@ -292,15 +295,19 @@ const RecordDashboard = () => {
         setRecordStatus(1);
         setChangeData(getCurrentIndex())
         recordingTimerId = setInterval(() => {
-            setElapsedTime(getElapsedTime() + 1);
+            recordingMTime += 100
+            if (Math.floor(recordingMTime / 1000)){
+                setElapsedTime(getElapsedTime() + 1);
+                recordingMTime = 0
+            }
             if (changeData() !== getCurrentIndex()) {
                 clearInterval(recordingTimerId)
                 if (getMediaRecorder()?.state === 'recording') {
                     getMediaRecorder()?.stop()
                 }
             }
-        }, 1000);
-        getMediaRecorder()?.start(1000);
+        }, 100);
+        getMediaRecorder()?.start(0);
     }
 
     const onSave = () => {
@@ -378,21 +385,10 @@ const RecordDashboard = () => {
             .then((response) => {
                 if (response.data.code == 200) {
                     // callback and reload the main city
-                    // notificationService.show({
-                    //     status: "success", /* or success, warning, danger */
-                    //     title: response.data.result?.success,
-                    //     duration: 1500,
-                    // });
                     // setRecordStatus(status)
                     data.status = 2
                 }
                 else {
-                    // notificationService.show({
-                    //     status: "danger", /* or success, warning, danger */
-                    //     title: "Upload failed!",
-                    //     description: "Please retry! 🤥",
-                    //     duration: 1500,
-                    // });
                     data.status = 5
                 }
                 setRecords([...getRecords().filter(record => record.index !== id), data])
@@ -400,12 +396,6 @@ const RecordDashboard = () => {
             })
             .catch((error) => {
                 console.error(error); // 30
-                // notificationService.show({
-                //     status: "danger", /* or success, warning, danger */
-                //     title: "Upload failed!",
-                //     description: "Please retry! 🤥",
-                //     duration: 1500,
-                // });
             });
     }
 
