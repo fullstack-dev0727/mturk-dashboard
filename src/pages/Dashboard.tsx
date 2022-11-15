@@ -230,12 +230,13 @@ const RecordDashboard = () => {
                     min: 720,
                     ideal: 1080,
                     max: 1440,
-                },
-                height: {
-                    min: 720,
-                    ideal: 1080,
-                    max: 1440
-                },
+                }
+                // ,
+                // height: {
+                //     min: 720,
+                //     ideal: 1080,
+                //     max: 1440
+                // },
             },
             // video: false,
             audio: true,
@@ -295,7 +296,7 @@ const RecordDashboard = () => {
         setRecordStatus(1);
         setChangeData(getCurrentIndex())
         recordingTimerId = setInterval(() => {
-            recordingMTime += 100
+            recordingMTime += 20
             if (Math.floor(recordingMTime / 1000)){
                 setElapsedTime(getElapsedTime() + 1);
                 recordingMTime = 0
@@ -306,7 +307,7 @@ const RecordDashboard = () => {
                     getMediaRecorder()?.stop()
                 }
             }
-        }, 100);
+        }, 20);
         getMediaRecorder()?.start(0);
     }
 
