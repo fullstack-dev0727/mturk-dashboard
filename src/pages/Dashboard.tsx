@@ -67,8 +67,6 @@ const RecordDashboard = () => {
 
     // video preview
     const options = {
-        audioBitsPerSecond: 128000,
-        videoBitsPerSecond: 2500000,
         mimeType: 'video/webm\;codecs=pcm'
         // mimeType: 'audio/webm\;codecs=opus'
     }
@@ -224,21 +222,7 @@ const RecordDashboard = () => {
 
     const startStream = async () => {
         const updatedConstraints = {
-            video: {
-                
-                width: {
-                    min: 720,
-                    ideal: 1080,
-                    max: 1440,
-                }
-                // ,
-                // height: {
-                //     min: 720,
-                //     ideal: 1080,
-                //     max: 1440
-                // },
-            },
-            // video: false,
+            video: true,
             audio: true,
             deviceId: {
                 exact: currentCamera()
