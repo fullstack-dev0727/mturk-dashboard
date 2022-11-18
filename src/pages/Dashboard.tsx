@@ -192,7 +192,7 @@ const RecordDashboard = () => {
 
 
     const getMedia = async () => {
-        if (!MediaRecorder.isTypeSupported(options['mimeType'])) options['mimeType'] = "video/ogg; codecs=pcm";
+        if (!MediaRecorder.isTypeSupported(options['mimeType'])) options['mimeType'] = "video/webm; codecs=pcm";
         const devices: MediaDeviceInfo[] = await navigator.mediaDevices.enumerateDevices();
         const videoDevices: MediaDeviceInfo[] = devices.filter(device => device.kind === 'videoinput');
         if (videoDevices.length < 1) {
