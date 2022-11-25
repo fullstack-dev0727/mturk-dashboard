@@ -169,7 +169,7 @@ const RecordDashboard = () => {
                 .then((response) => {
                     if (response.data.code == 200) {
                         // get mturkrecorddata from server
-                        setTotal(response.data.result.total_payment)
+                        setTotal(response.data.result.total_payment / 100)
                         setPayment(response.data.result.paypal)
                         getInitData(FetchMTurkRecordData)
                     }
