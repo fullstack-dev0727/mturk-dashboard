@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 * {
-  font: normal bold 'Oxygen';
+  font-family: cursive;
   font-weight: 700;
 }
 
@@ -26,6 +26,30 @@ code {
     monospace;
 }
 
+.backButton:hover {
+  transition: .3s all;
+}
+
+.backButton {
+  position: absolute !important;
+  top: 10px !important;
+  cursor: pointer;
+  left: 10px !important;
+}
+
+.login-input {
+  width: 100%;
+}
+
+.text-underline {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.text-underline:hover {
+  color: #00a0ac;
+}
+
 .bg-dark {
   background-color: rgba(51, 45, 45, 1) !important;
 }
@@ -37,9 +61,10 @@ code {
 }
 
 .bg-dark .btn-login {
-  margin-top: 60px;
+  margin-top: 30px;
+  margin-bottom: 20px;
   padding: 0.625rem 3rem;
-  font-weight: 500;
+  font-weight: 800;
   text-transform: uppercase;
   vertical-align: bottom;
   color: #fbfbfb;
@@ -49,6 +74,43 @@ code {
   text-decoration: none;
   font-size: .875rem;
   cursor: pointer;
+}
+
+.btn-save {
+  top: 40px;
+  position: relative;
+  padding: 0.625rem 3rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  vertical-align: bottom;
+  border-radius: 0.3rem;
+  background: transparent;
+  text-decoration: none;
+  font-size: .875rem;
+  cursor: pointer;
+}
+
+.btn-send {
+  top: 40px;
+  position: relative;
+  padding: 0.625rem 3rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  vertical-align: bottom;
+  border-radius: 0.3rem;
+  border: 2px solid grey;
+  background: transparent;
+  text-decoration: none;
+  font-size: .875rem;
+  cursor: pointer;
+}
+
+.border-white {
+  border: 2px solid white;
+}
+
+.border-dark {
+  border: 2px solid #1e293b;
 }
 
 .bg-dark .btn-login:hover {
@@ -69,7 +131,7 @@ code {
 }
 
 .record-section {
-  margin-top: 1rem;
+  padding-top: 2rem;
   flex-direction: column;
 }
 
@@ -173,15 +235,11 @@ button:hover {
   margin: auto;
   margin-top: 6px;
   min-width: max-content;
-  padding: 0.5rem;
-  border-radius: .6rem;
-  border-color: white;
-  background-color: #007bff;
   cursor: pointer;
+  background-color: transparent;
   font-size: 1.1rem;
   font-weight: 600;
-  color: white;
-  width: 300px;
+  width: 45px;
 }
 
 .btn-request-payout:hover {
@@ -252,6 +310,7 @@ button:hover {
   margin-bottom: 2rem;
   bottom: 0px;
   margin-top: 2rem;
+  justify-content: center;
 }
 
 .page-link {
@@ -332,7 +391,7 @@ button:hover {
 
 .hope-modal__body {
   padding: 0px;
-  background-color: transparent;
+  /* background-color: transparent; */
 }
 
 #spinner {
@@ -344,7 +403,7 @@ button:hover {
 }
 
 .hope-modal__content {
-  background-color: transparent;
+  background-color: transparent !important;
 }
 
 @media (min-width: 768px) {
@@ -369,19 +428,66 @@ button:hover {
 }
 
 .hope-button {
-  background-color: #007bff;
+  /* background-color: #007bff; */
+}
+
+.hope-th {
+  line-height: 2rem !important;
+}
+
+.hope-td {
+  padding: 0px 10px;
+  font-size: 1.5rem;
+  line-height: 1rem !important;
+}
+
+.setting-content {
+  width: 100%;
+  height: 300px;
+  border-radius: 1rem;
+  padding: 3rem;
+  padding-top: 5rem;
+}
+
+.payment-content {
+  width: 100%;
+  height: 300px;
+  border-radius: 1rem;
+  padding: 3rem;
+  background-color: white;
+  padding-top: 5rem;
+}
+
+.dark-background {
+  background-color: #1e293b;
+}
+
+.white-background {
+  background-color: white;
 }
 
 .modal-close {
   position: absolute;
-  top: -50px;
+  top: -15px;
   font-size: 20px;
   width: 20px;
   height: 20px;
-  color: white !important;
   background: #ffffff00;
   z-index: 9999;
-  right: 10px;
+  right: 15px;
+}
+
+.login-block {
+  width: 32rem;
+  position: relative;
+}
+
+.login-label {
+  color: white;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  width: 100%;
+  margin-left: 10px;
 }
 
 @media (min-width: 2000px) {
@@ -397,6 +503,7 @@ button:hover {
   font-size: 2rem;
   text-align: center;
   width: 100%;
+  padding-right: 2rem;
   color: white;
   backdrop-filter: blur(1px);
   cursor: pointer;
@@ -411,9 +518,10 @@ button:hover {
 
 .loader {
   margin-top: 20px;
-  font: normal bold 3rem Raleway;
+  transition: .2s all;
+  font: normal bold 2rem Raleway;
   letter-spacing: 2px;
-  color: gold;
+  /* color: gold; */
   animation: smokeOut 1.5s ease-in-out infinite alternate;
 
 }
@@ -433,7 +541,6 @@ button:hover {
   justify-content: center;
   background: rgb(255, 255, 255);
   z-index: 252;
-  margin: -2rem;
 }
 
 @keyframes smokeOut {
@@ -442,4 +549,108 @@ button:hover {
     filter: blur(5px);
     letter-spacing: 4px;
   }
+}
+
+
+/* admin panel */
+.container {
+  font-family: Poppins, sans-serif;
+  transition: margin-left 0.3s ease-in-out;
+  min-width: 100%;
+  min-height: 100vh;
+  max-height: 100vh;
+  padding: 0;
+  text-align: left;
+  color: black;
+  background-color: #f8f9fa;
+}
+
+.admin-header {
+  background-image: linear-gradient(45deg, #843cf7, #38b8f2);
+  height: 60px;
+  width: 100%;
+  padding: .5rem;
+  background-color: #17a2b8;
+}
+
+.no-data {
+  width: 100%;
+  text-align: center;
+}
+
+.admin-title {
+  font-family: cursive;
+  cursor: pointer;
+  font-weight: 1000;
+  color: white;
+  vertical-align: middle;
+  height: 100%;
+  margin-left: 2rem;
+  text-align: center;
+  font-size: 1.8rem;
+}
+
+
+.hope-table {
+  position: relative;
+  border: 1px solid var(--hope-colors-neutral5);
+  padding: var(--hope-space-4);
+  border-top-left-radius: var(--hope-radii-lg);
+  border-top-right-radius: var(--hope-radii-lg);
+  border-bottom-left-radius: var(--hope-radii-none);
+  border-bottom-right-radius: var(--hope-radii-none);
+  overflow-y: auto;
+  border-radius: 2rem;
+}
+
+.admin-body {
+  height: calc(100vh - 60px);
+  padding: 2rem;
+}
+
+.hope-th {
+  font-size: 1.2rem;
+}
+
+.table-spin {
+  position: absolute;
+  top: 45%;
+  right: 46%;
+  opacity: 1 !important;
+}
+
+.color-primary {
+  color: #38b8f2;
+}
+
+.btn-setting {
+  width: 45px;
+  position: absolute;
+  top: -8px;
+  right: 6rem;
+}
+
+.admin-toggle-button {
+  position: absolute;
+  margin-top: 0px !important;
+  position: absolute;
+  right: 2rem;
+}
+
+.text-teal {
+  color: #20c997;
+}
+
+.text-danger {
+  color: #dc3545;
+}
+
+.text-warning {
+  color: #ffc107;
+}
+
+.modal-balance{
+  position: absolute;
+    top: 80px;
+    right: 50px;
 }

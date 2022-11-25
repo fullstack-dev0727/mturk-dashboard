@@ -1,12 +1,32 @@
-import { onMount, createSignal, Switch, Match, createEffect, For } from 'solid-js';
+import { onMount, createSignal, Switch, Match, createEffect, For, Show } from 'solid-js';
 import RecordViewList from '../components/RecordViewList';
 import Camera from '../components/Camera';
 import axios from "axios";
 import NextButton from '../assets/next-button.svg';
 import PreviousButton from '../assets/previous-button.svg';
-import { notificationService, Tooltip } from '@hope-ui/solid'
+import settingImage from '../assets/settings.svg';
+import CloseImage from '../assets/close.svg';
+import {
+    useListContext,
+    usePermissions,
+    TopToolbar,
+    FilterButton,
+    CreateButton,
+    ExportButton,
+    List
+} from 'react-admin';
+import settingWhiteImage from '../assets/settings-white.svg';
+import {
+    notificationService,
+    Tooltip,
+    Modal,
+    ModalBody,
+    ModalContent,
+    ModalOverlay,
+    Input,
+} from '@hope-ui/solid'
 import { makeid, getUrlSearchParam } from '../utils';
-import { UploadFileToS3Bucket, FetchMTurkRecordData, SendS3UrlToServer } from '../utils/Url';
+import { UploadFileToS3Bucket, FetchMTurkRecordData, SendS3UrlToServer, GetMturkUserData, SetPaypal } from '../utils/Url';
 
 export type RecordType = {
     index: number,
@@ -31,7 +51,10 @@ const RecordDashboard = () => {
     const scriptIds: number[] = [];
     const CSV_FILE_PATH: string = './name.csv';
     const recordingStack: number[] = [];
-
+    const pricePerRecord = 0.03;
+    if ((localStorage.getItem('mturk_id') != getUrlSearchParam('mturkID') || localStorage.getItem('mturk_pwd') == '' || localStorage.getItem('mturk_pwd') == null)) {
+        window.location.replace("/")
+    }
     // Statistics
     const [getMturkID, setMturkID] = createSignal('a23AD2e')
     const [getTotalRecorded, setTotalRecorded] = createSignal(0)
@@ -68,6 +91,7 @@ const RecordDashboard = () => {
     // video preview
     const options = {
         mimeType: 'video/webm;codecs=pcm'
+        // mimeType: 'audio/webm\;codecs=opus'
     }
 
     let recordingTimerId: number;
@@ -84,6 +108,8 @@ const RecordDashboard = () => {
             setIsDarkMode(false)
         }
     }
+
+    const [getTotal, setTotal] = createSignal(0)
     const getDataWithAPI = () => {
         setOnLoading(true)
         const logFileText = async (file: RequestInfo | URL) => {
@@ -136,8 +162,36 @@ const RecordDashboard = () => {
             setRecordScripts(recordArray)
             totalCount = recordArray.length
 
-            // get mturkrecorddata from server
-            getInitData(FetchMTurkRecordData)
+            axios
+                .post(GetMturkUserData, {
+                    mturk_id: getMturkID(),
+                })
+                .then((response) => {
+                    if (response.data.code == 200) {
+                        // get mturkrecorddata from server
+                        setTotal(response.data.result.total_payment)
+                        setPayment(response.data.result.paypal)
+                        getInitData(FetchMTurkRecordData)
+                    }
+                    else {
+                        notificationService.show({
+                            status: "danger", /* or success, warning, danger */
+                            title: response.data.result.error,
+                            description: "Please retry! 🤥",
+                            duration: 1500,
+                        });
+                    }
+                    setOnLoading(false)
+                })
+                .catch((error) => {
+                    setOnLoading(false)
+                    notificationService.show({
+                        status: "danger", /* or success, warning, danger */
+                        title: "Connection error!",
+                        description: "Refresh the page! 🤥",
+                        duration: 1500,
+                    });
+                });
         }
 
         logFileText(CSV_FILE_PATH)
@@ -191,7 +245,10 @@ const RecordDashboard = () => {
 
 
     const getMedia = async () => {
-        if (!MediaRecorder.isTypeSupported(options['mimeType'])) options['mimeType'] = "video/webm; codecs=pcm";
+        if (!MediaRecorder.isTypeSupported(options['mimeType'])) {
+            console.log('ogg')
+            options['mimeType'] = "video/webm;codecs=pcm"
+        }
         const devices: MediaDeviceInfo[] = await navigator.mediaDevices.enumerateDevices();
         const videoDevices: MediaDeviceInfo[] = devices.filter(device => device.kind === 'videoinput');
         if (videoDevices.length < 1) {
@@ -279,8 +336,8 @@ const RecordDashboard = () => {
         setRecordStatus(1);
         setChangeData(getCurrentIndex())
         recordingTimerId = setInterval(() => {
-            recordingMTime += 20
-            if (Math.floor(recordingMTime / 1000)){
+            recordingMTime += 50
+            if (Math.floor(recordingMTime / 1000)) {
                 setElapsedTime(getElapsedTime() + 1);
                 recordingMTime = 0
             }
@@ -290,7 +347,7 @@ const RecordDashboard = () => {
                     getMediaRecorder()?.stop()
                 }
             }
-        }, 20);
+        }, 50);
         getMediaRecorder()?.start(0);
     }
 
@@ -303,6 +360,7 @@ const RecordDashboard = () => {
             { type: chunk.type }, { type: "video/webm" }
             // { type: chunk.type }, { type: "audio/webm" }
         )
+        console.log(mediaChunks())
         const videoBlob = new Blob(mediaChunks(), blobProperty)
 
         setRecords([...getRecords().filter(record => record.index !== getCurrentIndex()), { index: getCurrentIndex(), time: getElapsedTime(), data: videoBlob, status: 4, url: null, title: scripts[changeData()] }])
@@ -363,7 +421,7 @@ const RecordDashboard = () => {
                 transcript_id: id.toString(),
                 file_path: url,
                 duration: getRecords().filter(record => record.index === id)[0]?.time.toString(),
-                s3_bucket: 'assets-dev-283501',
+                s3_bucket: 'assets-bhuman-new',
                 s3_key: 'Names/Mturk/' + getMturkID() + '/' + scripts[id] + '.webm',
             })
             .then((response) => {
@@ -468,6 +526,19 @@ const RecordDashboard = () => {
         if (width <= 1100) setMaxColumn(1)
     }
 
+    // payment modal show or hide
+    const [showModal, setShowModal] = createSignal(false)
+    const [confirmPwd, setConfirmPwd] = createSignal(false)
+    const showPaymentModal = () => {
+        setTimeout(() => {document.getElementById('passwordInput')?.focus()}, 100)
+        setShowModal(!showModal())
+    }
+
+    const onStop = () => {
+        setShowModal(false);
+        setConfirmPwd(false)
+    }
+
     window.addEventListener('resize', function () {
         setMaxRowAndColumn()
     }, true)
@@ -485,8 +556,8 @@ const RecordDashboard = () => {
     }, getCurrentIndex())
 
     createEffect((prev) => {
-        setEarned(1.5 * getTotalRecorded())
-        setBalance(1.5 * getTotalRecorded())
+        setEarned(pricePerRecord * getTotalRecorded())
+        setBalance(getEarned() - getTotal())
     }, [getTotalRecorded()])
 
     onMount(() => {
@@ -497,12 +568,82 @@ const RecordDashboard = () => {
         getMedia();
     })
 
+    // save payment
+    const enterKeyCode = 13
+    const [getPayment, setPayment] = createSignal('')
+    const [userPassword, setUserPassword] = createSignal('')
+    const [saveStatus, setSaveStatus] = createSignal(false)
+    const paymentKeyDown = (event: any) => {
+        if (getMturkID() && event.keyCode == enterKeyCode) {
+            savePayment()
+        }
+    }
+
+    const passwordKeyDown = (event: any) => {
+        if (userPassword() && event.keyCode == enterKeyCode) {
+            confirmUserPassword()
+        }
+    }
+
+    const confirmUserPassword = () => {
+        console.log(localStorage.getItem('mturk_pwd'))
+        if (!localStorage.getItem('mturk_pwd') || localStorage.getItem('mturk_pwd') != userPassword()) {
+            notificationService.show({
+                status: "danger", /* or success, warning, danger */
+                description: "Password incorrect. Please retry! 🤥",
+                duration: 1500,
+            });
+        }
+        else{
+            setConfirmPwd(true)
+        }
+    }
+
+    const savePayment = () => {
+        if (saveStatus())
+            return;
+        setSaveStatus(true)
+        axios
+            .post(SetPaypal, {
+                mturk_id: getMturkID(),
+                paypal: getPayment(),
+            })
+            .then((response) => {
+                if (response.data.code == 200) {
+                    notificationService.show({
+                        status: "success", /* or success, warning, danger */
+                        title: 'Successfully updated.',
+                        duration: 1500,
+                    });
+                    setShowModal(false)
+                    setConfirmPwd(false)
+                }
+                else {
+                    notificationService.show({
+                        status: "danger", /* or success, warning, danger */
+                        title: response.data.result.error,
+                        description: "Please retry! 🤥",
+                        duration: 1500,
+                    });
+                }
+                setSaveStatus(false)
+            })
+            .catch((error) => {
+                notificationService.show({
+                    status: "danger", /* or success, warning, danger */
+                    title: "Connection error!",
+                    description: "Refresh the page! 🤥",
+                    duration: 1500,
+                });
+                setSaveStatus(false)
+            });
+    }
     return (
         <div class='container dark:bg-slate-800 '>
             {(onLoading()) &&
                 <div class='api-loading dark:bg-slate-800'>
                     <span class='apiCallLoading'></span>
-                    <span class={'loader'}></span>
+                    <span class={`loader text-slate-800 dark:text-white`}></span>
                 </div>}
             <div class='record-section grid lx:grid-cols-10 lg:grid-cols-8 md:grid-cols-5 sm:grid-cols-1'>
                 <div class='record-pane lx:col-span-8 lg:col-span-6 md:col-span-3 sm:col-span-1'>
@@ -558,7 +699,9 @@ const RecordDashboard = () => {
                 <div class='lx:col-span-2 lg:col-span-2 md:col-span-2 sm:col-span-1'>
                     <div class='statistics-section'>
                         <div class='btn-group'>
-                            <button class='bg-primary-500 hover:bg-primary-600 btn-request-payout md:w-[150px] lg:w-[150px] xs:w-[100px]'>Payout</button>
+                            <button class='bg-primary-500 hover:bg-primary-600 btn-request-payout dark:#1e293b' onclick={showPaymentModal}>
+                                <img class='border-black-400 border-2 rounded-lg p-2.5' src={getIsDarkMode() ? settingImage : settingWhiteImage}></img>
+                            </button>
                             <button
                                 id="theme-toggle"
                                 type="button"
@@ -615,9 +758,35 @@ const RecordDashboard = () => {
                     </div>
                 </div>
             </div>
-            {/* <audio class='localAudio' autoplay></audio> */}
-        </div>
+            <Modal centered size="2xl" closeOnOverlayClick={true} opened={showModal()} onClose={onStop}>
+                <ModalOverlay />
+                <ModalContent>
+                    <ModalBody>
+                        <div class={`setting-content ` + (getIsDarkMode() ? 'dark-background' : 'white-background')}>
+                            <button class={`modal-close ` + (getIsDarkMode() ? 'text-white' : 'text-slate-800')} onClick={onStop}>
+                                <svg class="hope-icon hope-c-XNyZK hope-c-PJLV hope-c-PJLV-ijhzIfm-css" viewBox="0 0 16 16"><path fill="currentColor" d="M2.64 1.27L7.5 6.13l4.84-4.84A.92.92 0 0 1 13 1a1 1 0 0 1 1 1a.9.9 0 0 1-.27.66L8.84 7.5l4.89 4.89A.9.9 0 0 1 14 13a1 1 0 0 1-1 1a.92.92 0 0 1-.69-.27L7.5 8.87l-4.85 4.85A.92.92 0 0 1 2 14a1 1 0 0 1-1-1a.9.9 0 0 1 .27-.66L6.16 7.5L1.27 2.61A.9.9 0 0 1 1 2a1 1 0 0 1 1-1c.24.003.47.1.64.27z"></path></svg>
+                            </button>
+                            {confirmPwd() ?
+                                <><span class={(!getIsDarkMode() ? 'text-slate-800' : 'text-white')}>You must input the correct information.</span><Input id='paymentInput' type="text" class="px-3 py-1.5 border rounded outline-none text-slate-800 dark:text-white leading-9 bg-transparent login-input mt-2" value={getPayment()} placeholder='Payment' onInput={(e) => setPayment(e.currentTarget.value)} onKeyDown={paymentKeyDown} /><div class='text-center'>
+                                    <Show when={getPayment()} fallback={<span class={`btn-save opacity-40 disabled text-slate-800 dark:text-white ` + (!getIsDarkMode() ? 'border-dark' : 'border-white')}>Save</span>}>
+                                        <a class={`btn-save border-lg rounded ` + (!getIsDarkMode() ? 'text-slate-800 border-dark' : 'text-white border-white')} onClick={savePayment}> Save </a>
+                                    </Show>
 
+                                </div></>
+                                :
+                                <><span class={(!getIsDarkMode() ? 'text-slate-800' : 'text-white')}>Please confirm the password.</span><Input id="passwordInput" type="password" class="px-3 py-1.5 border rounded outline-none text-slate-800 dark:text-white leading-9 bg-transparent login-input mt-2" value='' placeholder='Payment' onInput={(e) => setUserPassword(e.currentTarget.value)} onKeyDown={passwordKeyDown} /><div class='text-center'>
+                                    <Show when={userPassword()} fallback={<span class={`btn-save opacity-40 disabled text-slate-800 dark:text-white ` + (!getIsDarkMode() ? 'border-dark' : 'border-white')}>Confirm</span>}>
+                                        <a class={`btn-save border-lg rounded ` + (!getIsDarkMode() ? 'text-slate-800 border-dark' : 'text-white border-white')} onClick={confirmUserPassword}> Confirm </a>
+                                    </Show>
+
+                                </div></>
+                            }
+                        </div>
+
+                    </ModalBody>
+                </ModalContent>
+            </Modal>
+        </div>
     );
 };
 

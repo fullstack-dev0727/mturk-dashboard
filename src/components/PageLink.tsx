@@ -5,6 +5,7 @@ export type PageLinkProps = JSX.HTMLAttributes<HTMLAnchorElement> & {
   disabled?: boolean;
 };
 
+
 export default function PageLink(props: PageLinkProps) {
 
   const [status, otherProps] = splitProps(props, ["active", "disabled"]);
