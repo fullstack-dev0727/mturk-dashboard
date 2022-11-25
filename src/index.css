@@ -388,9 +388,11 @@ button:hover {
 .s3bucket-form {
   display: none;
 }
-
+.text-white {
+  color: white !important;
+}
 .hope-modal__body {
-  padding: 0px;
+  padding: 0px !important;
   /* background-color: transparent; */
 }
 
