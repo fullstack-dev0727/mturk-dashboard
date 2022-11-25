@@ -764,7 +764,7 @@ const RecordDashboard = () => {
                     <ModalBody>
                         <div class={`setting-content ` + (getIsDarkMode() ? 'dark-background' : 'white-background')}>
                             <button class={`modal-close ` + (getIsDarkMode() ? 'text-white' : 'text-slate-800')} onClick={onStop}>
-                                <svg class="hope-icon hope-c-XNyZK hope-c-PJLV hope-c-PJLV-ijhzIfm-css" viewBox="0 0 16 16"><path fill="currentColor" d="M2.64 1.27L7.5 6.13l4.84-4.84A.92.92 0 0 1 13 1a1 1 0 0 1 1 1a.9.9 0 0 1-.27.66L8.84 7.5l4.89 4.89A.9.9 0 0 1 14 13a1 1 0 0 1-1 1a.92.92 0 0 1-.69-.27L7.5 8.87l-4.85 4.85A.92.92 0 0 1 2 14a1 1 0 0 1-1-1a.9.9 0 0 1 .27-.66L6.16 7.5L1.27 2.61A.9.9 0 0 1 1 2a1 1 0 0 1 1-1c.24.003.47.1.64.27z"></path></svg>
+                                <svg class="hope-icon" viewBox="0 0 16 16"><path fill="currentColor" d="M2.64 1.27L7.5 6.13l4.84-4.84A.92.92 0 0 1 13 1a1 1 0 0 1 1 1a.9.9 0 0 1-.27.66L8.84 7.5l4.89 4.89A.9.9 0 0 1 14 13a1 1 0 0 1-1 1a.92.92 0 0 1-.69-.27L7.5 8.87l-4.85 4.85A.92.92 0 0 1 2 14a1 1 0 0 1-1-1a.9.9 0 0 1 .27-.66L6.16 7.5L1.27 2.61A.9.9 0 0 1 1 2a1 1 0 0 1 1-1c.24.003.47.1.64.27z"></path></svg>
                             </button>
                             {confirmPwd() ?
                                 <><span class={(!getIsDarkMode() ? 'text-slate-800' : 'text-white')}>You must input the correct information.</span><Input id='paymentInput' type="text" class="px-3 py-1.5 border rounded outline-none text-slate-800 dark:text-white leading-9 bg-transparent login-input mt-2" value={getPayment()} placeholder='Payment' onInput={(e) => setPayment(e.currentTarget.value)} onKeyDown={paymentKeyDown} /><div class='text-center'>
